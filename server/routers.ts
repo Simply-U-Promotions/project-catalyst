@@ -3,6 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { importRepository, getRepoInfo, getRepoFileTree, getFileContent, createBranch, commitFilesToBranch, createPullRequest } from "./githubImport";
+import { analyzeAndModifyCode, analyzeCodebase } from "./codeModificationService";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -77,6 +79,220 @@ export const appRouter = router({
     }),
   }),
 
+  deployments: router({
+    create: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        provider: z.enum(["vercel", "railway", "kubernetes"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { createDeployment, updateProject, getProjectById, getProjectFiles } = await import("./db");
+        const { deployProject } = await import("./deploymentService");
+        
+        // Get project details
+        const project = await getProjectById(input.projectId);
+        if (!project) {
+          throw new Error("Project not found");
+        }
+
+        // Determine deployment provider
+        const provider = input.provider || project.deploymentProvider || "vercel";
+
+        // Get generated files
+        const files = await getProjectFiles(input.projectId);
+        
+        // Create deployment record
+        const deploymentId = await createDeployment({
+          projectId: input.projectId,
+          provider,
+          status: "pending",
+          logs: `Deployment initiated to ${provider}...\n`,
+        });
+
+        // Update project status
+        await updateProject(input.projectId, { status: "deploying" });
+
+        // Start deployment process asynchronously
+        (async () => {
+          try {
+            const { updateDeployment } = await import("./db");
+            
+            // Get API tokens from environment
+            const tokens = {
+              vercel: process.env.VERCEL_TOKEN,
+              railway: process.env.RAILWAY_TOKEN,
+              kubeconfig: process.env.KUBECONFIG,
+            };
+
+            // Deploy to selected provider
+            const result = await deployProject({
+              provider,
+              projectName: project.name,
+              files,
+              githubRepoUrl: project.githubRepoUrl || undefined,
+              tokens,
+            });
+
+            if (result.success) {
+              await updateDeployment(deploymentId, {
+                status: "success",
+                providerDeploymentId: result.deploymentId,
+                deploymentUrl: result.deploymentUrl,
+                logs: `Deployment to ${provider} successful!\nDeployment ID: ${result.deploymentId}\nURL: ${result.deploymentUrl}`,
+              });
+              await updateProject(input.projectId, {
+                status: "deployed",
+                deploymentUrl: result.deploymentUrl,
+              });
+            } else {
+              await updateDeployment(deploymentId, {
+                status: "failed",
+                logs: `Deployment to ${provider} failed: ${result.error}`,
+                errorMessage: result.error,
+              });
+              await updateProject(input.projectId, { status: "failed" });
+            }
+          } catch (error) {
+            const { updateDeployment } = await import("./db");
+            await updateDeployment(deploymentId, {
+              status: "failed",
+              logs: `Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`,
+              errorMessage: error instanceof Error ? error.message : "Unknown error",
+            });
+            await updateProject(input.projectId, { status: "failed" });
+          }
+        })();
+
+        return { deploymentId, provider };
+      }),
+    getByProject: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ input }) => {
+        const { getProjectDeployments } = await import("./db");
+        return getProjectDeployments(input.projectId);
+      }),
+    getById: protectedProcedure
+      .input(z.object({ deploymentId: z.number() }))
+      .query(async ({ input }) => {
+        const { getDeploymentById } = await import("./db");
+        return getDeploymentById(input.deploymentId);
+      }),
+  }),
+
+  github: router({
+    import: protectedProcedure
+      .input(z.object({ repoUrl: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const { repoUrl } = input;
+        const { info, files } = await importRepository(repoUrl);
+        const { createProject, saveGeneratedFile } = await import("./db");
+        
+        // Create project from imported repository
+        const projectId = await createProject({
+          userId: ctx.user.id,
+          name: info.name,
+          description: info.description,
+          githubRepoUrl: repoUrl,
+          isImported: 1,
+          status: "ready",
+        });
+        
+        // Save all files
+        for (const file of files) {
+          await saveGeneratedFile({
+            projectId,
+            filePath: file.path,
+            content: file.content,
+            language: file.language,
+          });
+        }
+        
+        return { projectId, fileCount: files.length };
+      }),
+    getRepoInfo: protectedProcedure
+      .input(z.object({ repoUrl: z.string() }))
+      .query(async ({ input }) => {
+        return await getRepoInfo(input.repoUrl);
+      }),
+    getFileTree: protectedProcedure
+      .input(z.object({ repoUrl: z.string(), branch: z.string().optional() }))
+      .query(async ({ input }) => {
+        return await getRepoFileTree(input.repoUrl, input.branch);
+      }),
+    getFileContent: protectedProcedure
+      .input(z.object({ repoUrl: z.string(), filePath: z.string(), branch: z.string().optional() }))
+      .query(async ({ input }) => {
+        return await getFileContent(input.repoUrl, input.filePath, input.branch);
+      }),
+    createPR: protectedProcedure
+      .input(z.object({
+        repoUrl: z.string(),
+        branchName: z.string(),
+        title: z.string(),
+        body: z.string(),
+        baseBranch: z.string().optional(),
+        files: z.array(z.object({ path: z.string(), content: z.string() })),
+        commitMessage: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { repoUrl, branchName, title, body, baseBranch, files, commitMessage } = input;
+        
+        // Create branch
+        await createBranch(repoUrl, branchName, baseBranch);
+        
+        // Commit files
+        await commitFilesToBranch(repoUrl, branchName, files, commitMessage);
+        
+        // Create PR
+        const pr = await createPullRequest(repoUrl, branchName, title, body, baseBranch);
+        
+        return pr;
+      }),
+    modifyCode: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        description: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { getProjectById, getProjectFiles } = await import("./db");
+        
+        // Get project and files
+        const project = await getProjectById(input.projectId);
+        if (!project || !project.githubRepoUrl) {
+          throw new Error("Project not found or not linked to GitHub");
+        }
+        
+        const files = await getProjectFiles(input.projectId);
+        
+        // Analyze and generate modifications
+        const result = await analyzeAndModifyCode({
+          description: input.description,
+          files: files.map(f => ({
+            path: f.filePath,
+            content: f.content,
+            language: f.language || undefined,
+          })),
+          repoName: project.name,
+        });
+        
+        return result;
+      }),
+    analyzeCodebase: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ input }) => {
+        const { getProjectFiles } = await import("./db");
+        const files = await getProjectFiles(input.projectId);
+        
+        return await analyzeCodebase(
+          files.map(f => ({
+            path: f.filePath,
+            content: f.content,
+            language: f.language || undefined,
+          }))
+        );
+      }),
+  }),
+
   ai: router({
     generateCode: protectedProcedure
       .input(z.object({
@@ -114,6 +330,38 @@ export const appRouter = router({
             });
           }
 
+          // Create GitHub repository and commit files
+          let githubRepoUrl: string | undefined;
+          try {
+            const { createGitHubRepo, commitMultipleFiles, getGitHubUser } = await import("./githubIntegration");
+            const githubUser = await getGitHubUser();
+            
+            const repo = await createGitHubRepo({
+              name: input.projectName,
+              description: input.description,
+              private: false,
+            });
+
+            githubRepoUrl = repo.html_url;
+
+            // Commit all generated files
+            await commitMultipleFiles({
+              owner: githubUser.login,
+              repo: repo.name,
+              files: result.files.map(f => ({
+                path: f.path,
+                content: f.content,
+              })),
+              message: `feat: initial project generation\n\n${result.summary}`,
+            });
+
+            // Update project with GitHub URL
+            await updateProject(input.projectId, { githubRepoUrl });
+          } catch (error) {
+            console.error("GitHub integration error:", error);
+            // Don't fail the whole generation if GitHub fails
+          }
+
           // Save summary as conversation
           await addConversationMessage({
             projectId: input.projectId,
@@ -129,6 +377,7 @@ export const appRouter = router({
             filesGenerated: result.files.length,
             summary: result.summary,
             nextSteps: result.nextSteps,
+            githubRepoUrl,
           };
         } catch (error) {
           await updateProject(input.projectId, { status: "failed" });

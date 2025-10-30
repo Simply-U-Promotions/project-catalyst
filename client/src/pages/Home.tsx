@@ -7,6 +7,7 @@ import { APP_TITLE, getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
@@ -264,11 +265,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-6 mt-auto">
-        <div className="container text-center text-xs text-muted-foreground">
-          <p>© 2025 {APP_TITLE}. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

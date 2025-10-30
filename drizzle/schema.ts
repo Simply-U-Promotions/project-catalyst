@@ -35,7 +35,9 @@ export const projects = mysqlTable("projects", {
   description: text("description"),
   status: mysqlEnum("status", ["draft", "generating", "ready", "deploying", "deployed", "failed"]).default("draft").notNull(),
   templateId: int("templateId"),
+  deploymentProvider: mysqlEnum("deploymentProvider", ["vercel", "railway", "kubernetes"]).default("vercel"),
   githubRepoUrl: varchar("githubRepoUrl", { length: 500 }),
+  isImported: int("isImported").default(0), // 0 = new project, 1 = imported from existing repo
   deploymentUrl: varchar("deploymentUrl", { length: 500 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -79,6 +81,8 @@ export type InsertGeneratedFile = typeof generatedFiles.$inferInsert;
 export const deployments = mysqlTable("deployments", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull().references(() => projects.id),
+  provider: mysqlEnum("provider", ["vercel", "railway", "kubernetes"]).default("vercel").notNull(),
+  providerDeploymentId: varchar("providerDeploymentId", { length: 255 }),
   status: mysqlEnum("status", ["pending", "building", "deploying", "success", "failed"]).default("pending").notNull(),
   deploymentUrl: varchar("deploymentUrl", { length: 500 }),
   logs: text("logs"),
@@ -106,3 +110,26 @@ export const templates = mysqlTable("templates", {
 
 export type Template = typeof templates.$inferSelect;
 export type InsertTemplate = typeof templates.$inferInsert;
+
+/**
+ * Provisioned databases for projects
+ */
+export const provisionedDatabases = mysqlTable("provisioned_databases", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull().references(() => projects.id),
+  type: mysqlEnum("type", ["postgresql", "mysql", "mongodb", "redis"]).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  host: varchar("host", { length: 255 }).notNull(),
+  port: int("port").notNull(),
+  username: varchar("username", { length: 255 }).notNull(),
+  password: varchar("password", { length: 255 }).notNull(),
+  database: varchar("database", { length: 255 }).notNull(),
+  status: mysqlEnum("status", ["provisioning", "active", "failed", "deleted"]).default("provisioning").notNull(),
+  connectionString: text("connectionString"),
+  size: varchar("size", { length: 50 }).default("small"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProvisionedDatabase = typeof provisionedDatabases.$inferSelect;
+export type InsertProvisionedDatabase = typeof provisionedDatabases.$inferInsert;

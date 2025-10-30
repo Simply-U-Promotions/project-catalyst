@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { APP_TITLE, getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Code2, Plus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Code2, Plus, Clock, CheckCircle2, AlertCircle, GitBranch } from "lucide-react";
+import Footer from "@/components/Footer";
 import { useLocation } from "wouter";
 
 export default function Dashboard() {
@@ -68,10 +69,16 @@ export default function Dashboard() {
               Build and deploy applications with AI assistance
             </p>
           </div>
-          <Button onClick={() => setLocation("/projects/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setLocation("/import")}>
+              <GitBranch className="h-4 w-4 mr-2" />
+              Import Repository
+            </Button>
+            <Button onClick={() => setLocation("/projects/new")}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
+          </div>
         </div>
 
         {projectsLoading ? (
@@ -130,6 +137,7 @@ export default function Dashboard() {
           </Card>
         )}
       </main>
+      <Footer />
     </div>
   );
 }

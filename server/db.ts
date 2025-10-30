@@ -159,6 +159,19 @@ export async function getProjectDeployments(projectId: number) {
   return await db.select().from(deployments).where(eq(deployments.projectId, projectId)).orderBy(desc(deployments.createdAt));
 }
 
+export async function getDeploymentById(deploymentId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(deployments).where(eq(deployments.id, deploymentId)).limit(1);
+  return result[0];
+}
+
+export async function updateDeployment(deploymentId: number, updates: Partial<InsertDeployment>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(deployments).set(updates).where(eq(deployments.id, deploymentId));
+}
+
 // Template queries
 export async function getActiveTemplates() {
   const db = await getDb();
