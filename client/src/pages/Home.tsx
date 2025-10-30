@@ -16,11 +16,6 @@ export default function Home() {
     );
   }
 
-  if (isAuthenticated) {
-    setLocation("/dashboard");
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
       {/* Header */}
@@ -30,9 +25,13 @@ export default function Home() {
             <Code2 className="h-6 w-6 text-primary" />
             {APP_TITLE}
           </div>
-          <Button asChild>
-            <a href={getLoginUrl()}>Sign In</a>
-          </Button>
+          {isAuthenticated ? (
+            <Button onClick={() => setLocation("/dashboard")}>Go to Dashboard</Button>
+          ) : (
+            <Button asChild>
+              <a href={getLoginUrl()}>Sign In</a>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -50,9 +49,15 @@ export default function Home() {
           </div>
 
           <div className="flex gap-4 justify-center">
-            <Button size="lg" asChild>
-              <a href={getLoginUrl()}>Get Started Free</a>
-            </Button>
+            {isAuthenticated ? (
+              <Button size="lg" onClick={() => setLocation("/dashboard")}>
+                Go to Dashboard
+              </Button>
+            ) : (
+              <Button size="lg" asChild>
+                <a href={getLoginUrl()}>Get Started Free</a>
+              </Button>
+            )}
             <Button size="lg" variant="outline" asChild>
               <a href="#features">Learn More</a>
             </Button>

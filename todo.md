@@ -57,3 +57,6 @@
 - [ ] Security audit and hardening
 - [ ] Create marketing landing page
 - [ ] Save final checkpoint and deploy
+
+## Bug Fixes
+- [x] Fix landing page to show for all users (remove auto-redirect to dashboard)
