@@ -4,11 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { APP_TITLE, getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Code2, Send } from "lucide-react";
+import { ArrowLeft, Code2, Send, FileCode } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
+import FileExplorer from "@/components/FileExplorer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProjectDetail() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
@@ -24,6 +26,11 @@ export default function ProjectDetail() {
   );
 
   const { data: conversations = [] } = trpc.projects.getConversations.useQuery(
+    { projectId },
+    { enabled: isAuthenticated && projectId > 0 }
+  );
+
+  const { data: files = [], isLoading: filesLoading } = trpc.projects.getFiles.useQuery(
     { projectId },
     { enabled: isAuthenticated && projectId > 0 }
   );
@@ -64,7 +71,9 @@ export default function ProjectDetail() {
     const userMessage = message.trim();
     await generateCodeMutation.mutateAsync({
       projectId,
-      userMessage,
+      projectName: project?.name || "My Project",
+      description: userMessage,
+      templateId: project?.templateId?.toString(),
     });
 
     // Refetch conversations
@@ -110,8 +119,18 @@ export default function ProjectDetail() {
           </CardHeader>
         </Card>
 
-        {/* Chat Interface */}
-        <Card className="flex-1 flex flex-col">
+        {/* Tabs */}
+        <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+          <TabsList className="mb-4">
+            <TabsTrigger value="chat">Chat</TabsTrigger>
+            <TabsTrigger value="files" className="gap-2">
+              <FileCode className="h-4 w-4" />
+              Files {files.length > 0 && `(${files.length})`}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="chat" className="flex-1">
+            <Card className="flex-1 flex flex-col h-full">
           <CardHeader>
             <CardTitle>AI Assistant</CardTitle>
             <CardDescription>
@@ -179,6 +198,25 @@ export default function ProjectDetail() {
             </form>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="files">
+            {filesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <FileExplorer
+                files={files.map((f: any) => ({
+                  id: f.id.toString(),
+                  path: f.filePath,
+                  content: f.content,
+                  language: f.language || "text",
+                }))}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

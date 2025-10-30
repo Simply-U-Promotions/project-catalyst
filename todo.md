@@ -79,3 +79,11 @@
 - [x] Add templates API endpoints (list, getById, categories)
 - [x] Build Templates page with category filtering
 - [x] Add Browse Templates button to landing page
+
+## Phase 2 Progress Update
+- [x] Create code generator module with structured file output
+- [x] Implement JSON schema-based code generation with LLM
+- [x] Build FileExplorer component with tree view and code preview
+- [x] Add Files tab to project detail page
+- [x] Update AI router to save generated files to database
+- [x] Add copy-to-clipboard functionality for code files

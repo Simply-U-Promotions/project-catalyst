@@ -81,48 +81,59 @@ export const appRouter = router({
     generateCode: protectedProcedure
       .input(z.object({
         projectId: z.number(),
-        userMessage: z.string(),
+        projectName: z.string(),
+        description: z.string(),
+        templateId: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { addConversationMessage, updateProject } = await import("./db");
-        const { invokeLLM } = await import("./_core/llm");
-
-        // Save user message
-        await addConversationMessage({
-          projectId: input.projectId,
-          role: "user",
-          content: input.userMessage,
-        });
+        const { addConversationMessage, updateProject, saveGeneratedFile, getProjectConversations } = await import("./db");
+        const { generateProjectCode } = await import("./codeGenerator");
 
         // Update project status
         await updateProject(input.projectId, { status: "generating" });
 
-        // Call AI to generate response
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert full-stack developer. Help users build web applications by generating clean, production-ready code.",
-            },
-            {
-              role: "user",
-              content: input.userMessage,
-            },
-          ],
-        });
+        // Get conversation history
+        const history = await getProjectConversations(input.projectId);
 
-        const assistantMessage = typeof response.choices[0].message.content === 'string' 
-          ? response.choices[0].message.content 
-          : JSON.stringify(response.choices[0].message.content);
+        try {
+          // Generate code
+          const result = await generateProjectCode({
+            projectName: input.projectName,
+            description: input.description,
+            templateId: input.templateId,
+            conversationHistory: history.map(h => ({ role: h.role, content: h.content })),
+          });
 
-        // Save assistant response
-        await addConversationMessage({
-          projectId: input.projectId,
-          role: "assistant",
-          content: assistantMessage,
-        });
+          // Save generated files
+          for (const file of result.files) {
+            await saveGeneratedFile({
+              projectId: input.projectId,
+              filePath: file.path,
+              content: file.content,
+              language: file.language,
+            });
+          }
 
-        return { message: assistantMessage };
+          // Save summary as conversation
+          await addConversationMessage({
+            projectId: input.projectId,
+            role: "assistant",
+            content: `Generated ${result.files.length} files.\n\n${result.summary}\n\nNext steps:\n${result.nextSteps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`,
+          });
+
+          // Update project status
+          await updateProject(input.projectId, { status: "ready" });
+
+          return {
+            success: true,
+            filesGenerated: result.files.length,
+            summary: result.summary,
+            nextSteps: result.nextSteps,
+          };
+        } catch (error) {
+          await updateProject(input.projectId, { status: "failed" });
+          throw error;
+        }
       }),
   }),
 });
