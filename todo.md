@@ -65,3 +65,11 @@
 - [x] Redesign landing page with chat-first interface (like ChatGPT/Claude)
 - [x] Allow anonymous users to chat without login
 - [x] Prompt for login only when saving/deploying project
+
+## GitHub Integration Setup
+- [x] Request GitHub token through secure secrets system
+- [x] Create repository at Simply-U-Promotions organization
+- [x] Push initial code to GitHub
+- [ ] Set up automatic commits on code generation
+
+- [x] Add GitHub integration section to landing page with technical details
