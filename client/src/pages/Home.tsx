@@ -96,6 +96,11 @@ export default function Home() {
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 Describe your project in plain English. Our AI will generate production-ready code and deploy it instantly.
               </p>
+              <div className="flex items-center justify-center gap-4 mt-4">
+                <Button variant="outline" onClick={() => setLocation("/templates")}>
+                  Browse Templates
+                </Button>
+              </div>
             </div>
           )}
 

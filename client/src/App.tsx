@@ -8,11 +8,13 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import NewProject from "./pages/NewProject";
 import ProjectDetail from "./pages/ProjectDetail";
+import Templates from "./pages/Templates";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/templates"} component={Templates} />
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/projects/new"} component={NewProject} />
       <Route path={"/projects/:id"} component={ProjectDetail} />

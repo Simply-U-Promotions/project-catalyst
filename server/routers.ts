@@ -61,9 +61,19 @@ export const appRouter = router({
   }),
 
   templates: router({
-    list: publicProcedure.query(async () => {
-      const { getActiveTemplates } = await import("./db");
-      return await getActiveTemplates();
+    list: publicProcedure.query(() => {
+      const { templates } = require("./templates");
+      return templates;
+    }),
+    getById: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(({ input }) => {
+        const { getTemplateById } = require("./templates");
+        return getTemplateById(input.id);
+      }),
+    categories: publicProcedure.query(() => {
+      const { getAllCategories } = require("./templates");
+      return getAllCategories();
     }),
   }),
 
