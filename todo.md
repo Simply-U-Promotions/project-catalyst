@@ -60,3 +60,8 @@
 
 ## Bug Fixes
 - [x] Fix landing page to show for all users (remove auto-redirect to dashboard)
+
+## New Features
+- [x] Redesign landing page with chat-first interface (like ChatGPT/Claude)
+- [x] Allow anonymous users to chat without login
+- [x] Prompt for login only when saving/deploying project
