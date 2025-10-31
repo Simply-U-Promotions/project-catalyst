@@ -5,12 +5,13 @@
  * for user applications on Project Catalyst's infrastructure.
  */
 
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface BuildOptions {
   projectId: number;
@@ -49,14 +50,20 @@ export async function buildImage(options: BuildOptions): Promise<{
       await writeFile(filePath, file.content);
     }
     
+    // Detect framework and generate appropriate Dockerfile
+    const buildpack = await detectBuildpack(sourceCode);
+    const dockerfile = generateDockerfile(buildpack);
+    await writeFile(join(buildDir, "Dockerfile"), dockerfile);
+    
+    console.log(`[Docker] Detected framework: ${buildpack.framework}`);
+    
     // Use Nixpacks to build the image
     // Nixpacks detects language and creates optimized Docker image
     const imageName = `catalyst-${subdomain}:latest`;
     
     console.log(`[Docker] Building image ${imageName} from ${buildDir}`);
     
-    // In production, this would use nixpacks CLI
-    // For now, we'll simulate with a simple Docker build
+    // Build Docker image
     const { stdout, stderr } = await execAsync(
       `cd ${buildDir} && docker build -t ${imageName} . 2>&1`,
       { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for logs
@@ -92,22 +99,26 @@ export async function deployContainer(options: {
     const port = await findAvailablePort();
     
     // Run container with resource limits
-    const containerName = `catalyst-${subdomain}`;
+    // Sanitize subdomain to prevent command injection
+    const sanitizedSubdomain = subdomain.replace(/[^a-z0-9-]/g, '');
+    const containerName = `catalyst-${sanitizedSubdomain}`;
     
-    const dockerCmd = [
-      `docker run -d`,
-      `--name ${containerName}`,
-      `--cpus=${cpuLimit / 1000}`, // Convert millicores to CPUs
-      `--memory=${memoryLimit}m`,
-      `-p ${port}:${port}`, // Map internal port to host
-      `--restart unless-stopped`,
-      `--label catalyst.subdomain=${subdomain}`,
+    // Use array-based arguments to prevent command injection
+    const dockerArgs = [
+      'run',
+      '-d',
+      '--name', containerName,
+      '--cpus', String(cpuLimit / 1000),
+      '--memory', `${memoryLimit}m`,
+      '-p', `${port}:${port}`,
+      '--restart', 'unless-stopped',
+      '--label', `catalyst.subdomain=${sanitizedSubdomain}`,
       imageName,
-    ].join(" ");
+    ];
     
-    console.log(`[Docker] Deploying container: ${dockerCmd}`);
+    console.log(`[Docker] Deploying container: docker ${dockerArgs.join(' ')}`);
     
-    const { stdout } = await execAsync(dockerCmd);
+    const { stdout } = await execFileAsync('docker', dockerArgs);
     const containerId = stdout.trim();
     
     console.log(`[Docker] Container ${containerId} deployed on port ${port}`);
@@ -280,4 +291,63 @@ export async function detectBuildpack(sourceCode: { path: string; content: strin
     framework: "static",
     startCommand: "npx serve -s .",
   };
+}
+
+/**
+ * Generate Dockerfile based on detected buildpack
+ */
+function generateDockerfile(buildpack: {
+  framework: string;
+  buildCommand?: string;
+  startCommand?: string;
+}): string {
+  const { framework, buildCommand, startCommand } = buildpack;
+  
+  switch (framework) {
+    case "node":
+      return `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+${buildCommand ? `RUN ${buildCommand}` : ''}
+EXPOSE 3000
+CMD ${startCommand ? `["sh", "-c", "${startCommand}"]` : '["npm", "start"]'}
+`;
+    
+    case "python":
+      return `FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ${startCommand ? `["sh", "-c", "${startCommand}"]` : '["python", "app.py"]'}
+`;
+    
+    case "go":
+      return `FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.* ./
+RUN go mod download
+COPY . .
+RUN go build -o main .
+
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/main .
+EXPOSE 8080
+CMD ["./main"]
+`;
+    
+    case "static":
+    default:
+      return `FROM node:20-alpine
+WORKDIR /app
+COPY . .
+RUN npm install -g serve
+EXPOSE 3000
+CMD ["serve", "-s", ".", "-l", "3000"]
+`;
+  }
 }
