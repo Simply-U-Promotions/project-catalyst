@@ -54,6 +54,26 @@ async function startServer() {
   // Apply rate limiting to API routes
   app.use('/api/', apiLimiter);
   
+  // Health check endpoints (before rate limiting)
+  app.get("/health", async (req, res) => {
+    const { performHealthCheck } = await import("../healthCheck");
+    const health = await performHealthCheck();
+    const statusCode = health.status === "healthy" ? 200 : health.status === "degraded" ? 200 : 503;
+    res.status(statusCode).json(health);
+  });
+  
+  app.get("/health/ready", async (req, res) => {
+    const { performReadinessCheck } = await import("../healthCheck");
+    const readiness = await performReadinessCheck();
+    res.status(readiness.ready ? 200 : 503).json(readiness);
+  });
+  
+  app.get("/health/live", async (req, res) => {
+    const { performLivenessCheck } = await import("../healthCheck");
+    const liveness = performLivenessCheck();
+    res.status(liveness.alive ? 200 : 503).json(liveness);
+  });
+  
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   

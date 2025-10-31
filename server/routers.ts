@@ -18,6 +18,21 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    exportData: protectedProcedure.mutation(async ({ ctx }) => {
+      const { exportUserData } = await import("./dataExport");
+      return await exportUserData(ctx.user.id);
+    }),
+    deleteAccount: protectedProcedure
+      .input(z.object({
+        confirmation: z.literal("DELETE MY ACCOUNT"),
+      }))
+      .mutation(async ({ ctx }) => {
+        const { deleteUserAccount } = await import("./dataExport");
+        await deleteUserAccount(ctx.user.id);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+        return { success: true };
+      }),
   }),
 
   projects: router({

@@ -26,11 +26,13 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { UserCog } from "lucide-react";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: FolderKanban, label: "Projects", path: "/dashboard" },
   { icon: DollarSign, label: "Cost Management", path: "/cost-management" },
+  { icon: UserCog, label: "Account", path: "/account" },
   { icon: SettingsIcon, label: "Settings", path: "/settings" },
 ];
 
