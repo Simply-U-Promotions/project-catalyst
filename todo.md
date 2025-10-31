@@ -294,3 +294,9 @@
 - [x] Fix React hooks error in Templates page ("Rendered more hooks than during the previous render")
 - [x] Ensure hooks are called unconditionally at component top level
 - [x] Test Templates page functionality after fix
+
+## UI Improvements (Templates Loading)
+- [x] Create skeleton card component for loading state
+- [x] Add skeleton loading animation to Templates page
+- [x] Replace spinner with skeleton cards grid
+- [x] Test loading animation appearance

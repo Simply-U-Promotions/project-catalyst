@@ -9,6 +9,7 @@ import { APP_TITLE, getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useState } from "react";
+import { TemplateCardSkeleton } from "@/components/TemplateCardSkeleton";
 
 export default function Templates() {
   const { isAuthenticated, loading } = useAuth();
@@ -17,7 +18,7 @@ export default function Templates() {
   const { data: categories } = trpc.templates.categories.useQuery();
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  if (loading || isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -108,51 +109,58 @@ export default function Templates() {
 
             <TabsContent value={selectedCategory} className="mt-8">
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTemplates?.map((template: any) => (
-                  <Card key={template.id} className="p-6 flex flex-col space-y-4 hover:shadow-lg transition-shadow">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-lg">{template.name}</h3>
-                          <Badge variant="secondary" className={getComplexityColor(template.complexity)}>
-                            {template.complexity}
-                          </Badge>
+                {isLoading ? (
+                  // Show skeleton cards while loading
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <TemplateCardSkeleton key={i} />
+                  ))
+                ) : (
+                  filteredTemplates?.map((template: any) => (
+                    <Card key={template.id} className="p-6 flex flex-col space-y-4 hover:shadow-lg transition-shadow">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <h3 className="font-semibold text-lg">{template.name}</h3>
+                            <Badge variant="secondary" className={getComplexityColor(template.complexity)}>
+                              {template.complexity}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {template.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {template.estimatedTime}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Layers className="h-3 w-3" />
+                          {template.features.length} features
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {template.description}
-                      </p>
-                    </div>
 
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {template.estimatedTime}
+                      <div className="flex flex-wrap gap-1">
+                        {template.tags.slice(0, 3).map((tag: string) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Layers className="h-3 w-3" />
-                        {template.features.length} features
+
+                      <div className="pt-2 mt-auto">
+                        <Button
+                          className="w-full"
+                          onClick={() => handleSelectTemplate(template.id)}
+                        >
+                          Use Template
+                        </Button>
                       </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {template.tags.slice(0, 3).map((tag: string) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    <div className="pt-2 mt-auto">
-                      <Button
-                        className="w-full"
-                        onClick={() => handleSelectTemplate(template.id)}
-                      >
-                        Use Template
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>
