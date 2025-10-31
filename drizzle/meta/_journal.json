@@ -43,6 +43,13 @@
       "when": 1761853426033,
       "tag": "0005_tidy_blacklash",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1761902394783,
+      "tag": "0006_public_black_bolt",
+      "breakpoints": true
     }
   ]
 }

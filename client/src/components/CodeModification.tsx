@@ -231,6 +231,23 @@ export default function CodeModification({ projectId, repoUrl }: CodeModificatio
                     View Pull Request on GitHub
                   </a>
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const subject = encodeURIComponent(`AI Error Report: ${prCreationState.prUrl}`);
+                    const body = encodeURIComponent(
+                      `Project: ${repoUrl}\n` +
+                      `PR URL: ${prCreationState.prUrl}\n` +
+                      `Request: ${modificationRequest}\n\n` +
+                      `Issue Description:\n` +
+                      `[Describe what went wrong with the AI-generated code]`
+                    );
+                    window.open(`mailto:support@projectcatalyst.com?subject=${subject}&body=${body}`, '_blank');
+                  }}
+                >
+                  Report AI Error
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -246,6 +263,24 @@ export default function CodeModification({ projectId, repoUrl }: CodeModificatio
               <div>
                 <h3 className="font-semibold text-red-900 dark:text-red-100">Failed to Create Pull Request</h3>
                 <p className="text-sm text-red-700 dark:text-red-300 mt-1">{prCreationState.error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    const subject = encodeURIComponent(`AI Error Report: PR Creation Failed`);
+                    const body = encodeURIComponent(
+                      `Project: ${repoUrl}\n` +
+                      `Request: ${modificationRequest}\n` +
+                      `Error: ${prCreationState.error}\n\n` +
+                      `Additional Details:\n` +
+                      `[Describe what you were trying to do]`
+                    );
+                    window.open(`mailto:support@projectcatalyst.com?subject=${subject}&body=${body}`, '_blank');
+                  }}
+                >
+                  Report This Error
+                </Button>
               </div>
             </div>
           </CardContent>

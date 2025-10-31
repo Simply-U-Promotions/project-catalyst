@@ -385,6 +385,36 @@ export const appRouter = router({
         }
       }),
   }),
+
+  // Admin-only endpoints for cost monitoring
+  admin: router({
+    costSummary: protectedProcedure
+      .query(async ({ ctx }) => {
+        // Check if user is admin
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized: Admin access required');
+        }
+        const { getAllUserCostSummaries } = await import("./costTrackingService");
+        return await getAllUserCostSummaries();
+      }),
+    costStatistics: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized: Admin access required');
+        }
+        const { getCostStatistics } = await import("./costTrackingService");
+        return await getCostStatistics();
+      }),
+    userCostHistory: protectedProcedure
+      .input(z.object({ userId: z.number(), limit: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized: Admin access required');
+        }
+        const { getUserApiCallHistory } = await import("./costTrackingService");
+        return await getUserApiCallHistory(input.userId, input.limit);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

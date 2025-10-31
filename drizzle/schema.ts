@@ -133,3 +133,43 @@ export const provisionedDatabases = mysqlTable("provisioned_databases", {
 
 export type ProvisionedDatabase = typeof provisionedDatabases.$inferSelect;
 export type InsertProvisionedDatabase = typeof provisionedDatabases.$inferInsert;
+
+/**
+ * LLM API usage tracking for cost monitoring
+ */
+export const llmApiCalls = mysqlTable("llm_api_calls", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  projectId: int("projectId").references(() => projects.id),
+  feature: mysqlEnum("feature", ["code_generation", "codebase_analysis", "code_modification", "chat"]).notNull(),
+  model: varchar("model", { length: 100 }).notNull(),
+  promptTokens: int("promptTokens").notNull(),
+  completionTokens: int("completionTokens").notNull(),
+  totalTokens: int("totalTokens").notNull(),
+  estimatedCost: int("estimatedCost").notNull(), // Cost in cents (e.g., 150 = $1.50)
+  responseTime: int("responseTime"), // Response time in milliseconds
+  success: int("success").default(1).notNull(), // 1 = success, 0 = failed
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LlmApiCall = typeof llmApiCalls.$inferSelect;
+export type InsertLlmApiCall = typeof llmApiCalls.$inferInsert;
+
+/**
+ * User cost summary for quick lookups
+ */
+export const userCostSummary = mysqlTable("user_cost_summary", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique().references(() => users.id),
+  totalCalls: int("totalCalls").default(0).notNull(),
+  totalTokens: int("totalTokens").default(0).notNull(),
+  totalCost: int("totalCost").default(0).notNull(), // Cost in cents
+  monthlyCallsCount: int("monthlyCallsCount").default(0).notNull(),
+  monthlyCost: int("monthlyCost").default(0).notNull(), // Cost in cents for current month
+  lastCallAt: timestamp("lastCallAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserCostSummary = typeof userCostSummary.$inferSelect;
+export type InsertUserCostSummary = typeof userCostSummary.$inferInsert;

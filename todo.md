@@ -212,3 +212,32 @@
 - [x] Update FRD with code modification service details
 - [x] Update FRD with testing infrastructure documentation
 - [x] Update FRD with build optimization details
+
+## Critical Recommendations Implementation (Pre-Launch)
+- [x] Build admin cost monitoring dashboard (track per-user LLM API costs)
+- [x] Create LLM API cost tracking database schema
+- [x] Implement cost calculation service with model pricing
+- [x] Add admin-only API endpoints for cost data
+- [x] Create AdminCostDashboard UI component
+- [x] Add cost statistics cards and user breakdown table
+- [x] Implement detailed API call history view
+- [x] Implement "Repo Gauntlet" testing framework (20 messy real-world repos)
+- [x] Create test suite with 5 representative repositories
+- [x] Add quality evaluation criteria
+- [x] Implement automated quality scoring
+- [ ] Run AI quality validation tests on messy repositories (manual execution required)
+- [ ] Document AI quality test results and improvement areas
+- [x] Add "Report AI Error" button to PR workflow
+- [x] Add error reporting for successful PRs
+- [x] Add error reporting for failed PR creation
+- [x] Include context (repo URL, request, error message) in reports
+- [ ] Enhance prompt engineering to preserve existing functionality
+- [ ] Implement AI-assisted scoping confirmation ("I plan to modify files A, B, C")
+- [ ] Add prompt injection sanitization and jailbreak detection
+- [ ] Create admin "kill switch" for Module 9 (code modification)
+- [ ] Build asynchronous workflow for complex modifications
+- [ ] Add cost alerts and fair use policy
+- [ ] Implement file-by-file diff review UI
+- [ ] Add aggressive prompt guidance with good/bad examples
+- [ ] Create internal cost dashboard for real-time monitoring
+- [ ] Document RAG architecture plan for V3 (100+ file support)

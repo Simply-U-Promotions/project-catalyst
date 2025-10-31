@@ -265,8 +265,16 @@ const normalizeResponseFormat = ({
   };
 };
 
-export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+export async function invokeLLM(
+  params: InvokeParams,
+  context?: {
+    userId?: number;
+    projectId?: number;
+    feature?: "code_generation" | "codebase_analysis" | "code_modification" | "chat";
+  }
+): Promise<InvokeResult> {
   assertApiKey();
+  const startTime = Date.now();
 
   const {
     messages,
@@ -323,10 +331,54 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (!response.ok) {
     const errorText = await response.text();
+    
+    // Log failed API call
+    if (context?.userId && context?.feature) {
+      const responseTime = Date.now() - startTime;
+      try {
+        const { logLlmApiCall } = await import("../costTrackingService");
+        await logLlmApiCall({
+          userId: context.userId,
+          projectId: context.projectId,
+          feature: context.feature,
+          model: "gemini-2.5-flash",
+          promptTokens: 0,
+          completionTokens: 0,
+          responseTime,
+          success: false,
+          errorMessage: `${response.status} ${response.statusText}`,
+        });
+      } catch (logError) {
+        console.error("[LLM] Failed to log API call:", logError);
+      }
+    }
+    
     throw new Error(
       `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
     );
   }
 
-  return (await response.json()) as InvokeResult;
+  const result = (await response.json()) as InvokeResult;
+  const responseTime = Date.now() - startTime;
+
+  // Log successful API call
+  if (context?.userId && context?.feature && result.usage) {
+    try {
+      const { logLlmApiCall } = await import("../costTrackingService");
+      await logLlmApiCall({
+        userId: context.userId,
+        projectId: context.projectId,
+        feature: context.feature,
+        model: result.model,
+        promptTokens: result.usage.prompt_tokens,
+        completionTokens: result.usage.completion_tokens,
+        responseTime,
+        success: true,
+      });
+    } catch (logError) {
+      console.error("[LLM] Failed to log API call:", logError);
+    }
+  }
+
+  return result;
 }

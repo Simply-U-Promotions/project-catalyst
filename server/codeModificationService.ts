@@ -29,7 +29,8 @@ interface ModificationResult {
  * Analyze modification request and generate code changes
  */
 export async function analyzeAndModifyCode(
-  request: ModificationRequest
+  request: ModificationRequest,
+  context?: { userId: number; projectId?: number }
 ): Promise<ModificationResult> {
   const { description, files, repoName } = request;
 
