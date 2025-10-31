@@ -47,6 +47,8 @@ export default function ProjectDetail() {
       } else {
         toast.success("Project generated successfully!");
       }
+      // Invalidate files query to refresh the Files tab
+      utils.projects.getFiles.invalidate({ projectId });
     },
     onError: (error) => {
       toast.error(error.message || "Failed to generate project");

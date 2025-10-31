@@ -310,3 +310,8 @@
 - [x] Implement sorting logic for Newest, Most Popular, Recently Used
 - [x] Add sort state management with useState
 - [x] Test sorting functionality with different options
+
+## Critical UX Bug Fixes (User Reported)
+- [x] Fix New Project flow to auto-populate description in AI chat (currently asks twice)
+- [x] Fix Files tab not displaying generated files (shows "No files generated yet" despite 11 files being generated)
+- [ ] Add website preview functionality similar to Manus/other LLMs

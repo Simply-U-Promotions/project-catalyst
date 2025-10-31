@@ -17,9 +17,33 @@ export default function NewProject() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  const createProjectMutation = trpc.projects.create.useMutation({
+  const generateCodeMutation = trpc.ai.generateCode.useMutation({
     onSuccess: (data) => {
+      toast.success("Project created and code generation started!");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to generate code");
+    },
+  });
+
+  const createProjectMutation = trpc.projects.create.useMutation({
+    onSuccess: async (data) => {
       toast.success("Project created successfully!");
+      
+      // If description is provided, automatically start code generation
+      if (description.trim()) {
+        try {
+          await generateCodeMutation.mutateAsync({
+            projectId: data.projectId,
+            projectName: name.trim(),
+            description: description.trim(),
+          });
+        } catch (error) {
+          console.error("Code generation error:", error);
+        }
+      }
+      
+      // Navigate to project detail page
       setLocation(`/projects/${data.projectId}`);
     },
     onError: (error) => {
@@ -119,10 +143,10 @@ export default function NewProject() {
               <div className="flex gap-3">
                 <Button
                   type="submit"
-                  disabled={createProjectMutation.isPending}
+                  disabled={createProjectMutation.isPending || generateCodeMutation.isPending}
                   className="flex-1"
                 >
-                  {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+                  {createProjectMutation.isPending || generateCodeMutation.isPending ? "Creating..." : "Create Project"}
                 </Button>
                 <Button
                   type="button"
