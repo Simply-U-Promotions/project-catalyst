@@ -300,3 +300,9 @@
 - [x] Add skeleton loading animation to Templates page
 - [x] Replace spinner with skeleton cards grid
 - [x] Test loading animation appearance
+
+## Templates Sorting Feature
+- [x] Add 'Sort by' dropdown to Templates page header
+- [x] Implement sorting logic for Newest, Most Popular, Recently Used
+- [x] Add sort state management with useState
+- [x] Test sorting functionality with different options

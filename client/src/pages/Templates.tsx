@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Code2, Clock, Layers } from "lucide-react";
+import { Code2, Clock, Layers, ArrowUpDown } from "lucide-react";
 import { APP_TITLE, getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ export default function Templates() {
   const { data: templates, isLoading } = trpc.templates.list.useQuery();
   const { data: categories } = trpc.templates.categories.useQuery();
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [sortBy, setSortBy] = useState<"newest" | "popular" | "recent">("newest");
 
   if (loading) {
     return (
@@ -44,6 +46,20 @@ export default function Templates() {
   const filteredTemplates = templates?.filter(
     (t: any) => selectedCategory === "All" || t.category === selectedCategory
   );
+
+  // Sort templates based on selected sort option
+  const sortedTemplates = filteredTemplates?.sort((a: any, b: any) => {
+    switch (sortBy) {
+      case "newest":
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      case "popular":
+        return (b.usageCount || 0) - (a.usageCount || 0);
+      case "recent":
+        return new Date(b.lastUsed || 0).getTime() - new Date(a.lastUsed || 0).getTime();
+      default:
+        return 0;
+    }
+  });
 
   const getComplexityColor = (complexity: string) => {
     switch (complexity) {
@@ -97,6 +113,24 @@ export default function Templates() {
             </p>
           </div>
 
+          {/* Sort and Filter Controls */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Sort by:</span>
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                  <SelectItem value="recent">Recently Used</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Category Tabs */}
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
             <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto gap-2">
@@ -115,7 +149,7 @@ export default function Templates() {
                     <TemplateCardSkeleton key={i} />
                   ))
                 ) : (
-                  filteredTemplates?.map((template: any) => (
+                  sortedTemplates?.map((template: any) => (
                     <Card key={template.id} className="p-6 flex flex-col space-y-4 hover:shadow-lg transition-shadow">
                       <div className="space-y-3">
                         <div className="flex items-start justify-between">
