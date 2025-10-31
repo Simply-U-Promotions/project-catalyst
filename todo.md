@@ -8,9 +8,13 @@
 ## Phase 2: AI Code Generation Module
 - [x] Integrate OpenAI/Claude API for code generation
 - [x] Create conversation interface for project requirements
-- [ ] Build template system for common project types (SaaS, landing pages, APIs)
-- [ ] Implement code generation logic with file structure output
-- [ ] Add code preview and editing capabilities
+- [x] Build template system for common project types (SaaS, landing pages, APIs)
+- [x] Implement code generation logic with file structure output
+- [x] Add code preview and editing capabilities
+- [x] Create CodePreview component with file tree visualization
+- [x] Create NewProjectEnhanced page with template selection
+- [x] Add generateCode API endpoint with LLM integration
+- [x] Implement file structure output with syntax highlighting
 
 ## Phase 3: GitHub Integration
 - [ ] Set up GitHub OAuth integration

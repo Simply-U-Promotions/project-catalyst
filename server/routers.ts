@@ -60,6 +60,92 @@ export const appRouter = router({
         const { getProjectFiles } = await import("./db");
         return await getProjectFiles(input.projectId);
       }),
+    generateCode: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(255),
+        description: z.string().optional(),
+        templateId: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { getTemplateById } = require("./templates");
+        const { invokeLLM } = await import("./_core/llm");
+        
+        const template = getTemplateById(input.templateId);
+        if (!template) {
+          throw new Error("Template not found");
+        }
+
+        // Generate code using LLM
+        const prompt = `Generate a complete ${template.name} project with the following requirements:
+
+Project Name: ${input.name}
+Template: ${template.name}
+Description: ${template.description}
+${input.description ? `Additional Requirements: ${input.description}` : ""}
+
+Tech Stack:
+${template.techStack.frontend ? `Frontend: ${template.techStack.frontend.join(", ")}` : ""}
+${template.techStack.backend ? `Backend: ${template.techStack.backend.join(", ")}` : ""}
+${template.techStack.database ? `Database: ${template.techStack.database.join(", ")}` : ""}
+
+Features to implement:
+${template.features.map((f, i) => `${i + 1}. ${f}`).join("\n")}
+
+Generate a file structure with actual code for each file. Return the response as a JSON array of files with this structure:
+[
+  {
+    "path": "src/index.tsx",
+    "content": "// actual code here",
+    "language": "typescript"
+  }
+]
+
+Include at minimum:
+- Package.json with all dependencies
+- README.md with setup instructions
+- Main application files
+- Configuration files
+- At least 10-15 files total for a complete project
+
+Return ONLY the JSON array, no additional text.`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "You are an expert full-stack developer. Generate production-ready code with best practices, proper error handling, and clean architecture." },
+            { role: "user", content: prompt },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "code_files",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  files: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        path: { type: "string" },
+                        content: { type: "string" },
+                        language: { type: "string" },
+                      },
+                      required: ["path", "content", "language"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["files"],
+                additionalProperties: false,
+              },
+            },
+          },
+        }, { userId: ctx.user.id, feature: "code_generation", projectId: 0 });
+
+        const result = JSON.parse(response.choices[0].message.content || "{}");
+        return { files: result.files || [] };
+      }),
   }),
 
   templates: router({
