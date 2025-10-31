@@ -13,6 +13,7 @@ import FileExplorer from "@/components/FileExplorer";
 import Deployments from "@/components/Deployments";
 import CodeModification from "@/components/CodeModification";
 import CodebaseSummary from "@/components/CodebaseSummary";
+import BuiltInDeployment from "@/components/BuiltInDeployment";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProjectDetail() {
@@ -173,11 +174,17 @@ export default function ProjectDetail() {
                 Modify Code
               </TabsTrigger>
             )}
+            <TabsTrigger value="catalyst" className="gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Deploy to Catalyst
+            </TabsTrigger>
             <TabsTrigger value="deployments" className="gap-2">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
-              Deployments
+              External Providers
             </TabsTrigger>
           </TabsList>
 
@@ -280,6 +287,10 @@ export default function ProjectDetail() {
               <CodeModification projectId={projectId} repoUrl={project.githubRepoUrl || ""} />
             </TabsContent>
           )}
+
+          <TabsContent value="catalyst">
+            <BuiltInDeployment projectId={projectId} />
+          </TabsContent>
 
           <TabsContent value="deployments">
             <Deployments projectId={projectId} />

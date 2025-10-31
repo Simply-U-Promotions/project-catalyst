@@ -248,3 +248,21 @@
 - [ ] Add aggressive prompt guidance with good/bad examples
 - [ ] Create internal cost dashboard for real-time monitoring
 - [ ] Document RAG architecture plan for V3 (100+ file support)
+
+## Built-in Deployment Infrastructure (Core Feature)
+- [x] Design deployment architecture (Docker + reverse proxy)
+- [x] Create deployment database schema (deployments, containers, logs)
+- [x] Implement Docker container management service
+- [x] Build Nixpacks integration for automatic buildpack detection
+- [x] Implement subdomain generation and DNS management
+- [x] Build deployment API endpoints (deploy, stop, restart, logs, status)
+- [x] Create BuiltInDeployment UI component
+- [x] Add "Deploy to Catalyst" tab in project detail page
+- [x] Add deployment status monitoring and health checks
+- [x] Implement deployment logs viewing
+- [x] Add resource limits (CPU, memory, storage)
+- [ ] Create reverse proxy service for routing traffic (requires infrastructure)
+- [ ] Create deployment rollback functionality
+- [ ] Build deployment analytics and metrics
+- [ ] Add custom domain support (future enhancement)
+- [ ] Implement SSL certificate management (future enhancement)

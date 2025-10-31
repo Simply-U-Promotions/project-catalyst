@@ -173,3 +173,46 @@ export const userCostSummary = mysqlTable("user_cost_summary", {
 
 export type UserCostSummary = typeof userCostSummary.$inferSelect;
 export type InsertUserCostSummary = typeof userCostSummary.$inferInsert;
+
+/**
+ * Built-in deployments - tracks deployments on Project Catalyst's own infrastructure
+ */
+export const builtInDeployments = mysqlTable("built_in_deployments", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull().references(() => projects.id),
+  userId: int("userId").notNull().references(() => users.id),
+  containerId: varchar("containerId", { length: 255 }), // Docker container ID
+  subdomain: varchar("subdomain", { length: 255 }).notNull().unique(), // e.g., "my-app" for my-app.catalyst.app
+  deploymentUrl: varchar("deploymentUrl", { length: 500 }).notNull(), // Full URL
+  status: mysqlEnum("status", ["pending", "building", "running", "stopped", "failed"]).default("pending").notNull(),
+  buildLogs: text("buildLogs"),
+  runtimeLogs: text("runtimeLogs"),
+  errorMessage: text("errorMessage"),
+  port: int("port"), // Internal container port
+  cpuLimit: int("cpuLimit").default(1000), // CPU limit in millicores (1000 = 1 CPU)
+  memoryLimit: int("memoryLimit").default(512), // Memory limit in MB
+  storageLimit: int("storageLimit").default(1024), // Storage limit in MB
+  healthCheckUrl: varchar("healthCheckUrl", { length: 500 }), // Health check endpoint
+  lastHealthCheck: timestamp("lastHealthCheck"),
+  healthStatus: mysqlEnum("healthStatus", ["healthy", "unhealthy", "unknown"]).default("unknown"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  stoppedAt: timestamp("stoppedAt"),
+});
+
+export type BuiltInDeployment = typeof builtInDeployments.$inferSelect;
+export type InsertBuiltInDeployment = typeof builtInDeployments.$inferInsert;
+
+/**
+ * Deployment logs - stores streaming logs from deployments
+ */
+export const deploymentLogs = mysqlTable("deployment_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  deploymentId: int("deploymentId").notNull().references(() => builtInDeployments.id),
+  logType: mysqlEnum("logType", ["build", "runtime", "error"]).notNull(),
+  message: text("message").notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type DeploymentLog = typeof deploymentLogs.$inferSelect;
+export type InsertDeploymentLog = typeof deploymentLogs.$inferInsert;

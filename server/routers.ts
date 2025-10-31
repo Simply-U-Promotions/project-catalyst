@@ -405,6 +405,153 @@ export const appRouter = router({
   }),
 
   // Admin-only endpoints for cost monitoring
+  builtInDeployment: router({
+    deploy: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { getProjectById, getProjectFiles } = await import("./db");
+        const { buildImage, deployContainer, generateSubdomain } = await import("./dockerService");
+        const { builtInDeployments } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        
+        const project = await getProjectById(input.projectId);
+        if (!project) {
+          throw new Error("Project not found");
+        }
+        
+        // Get project files
+        const files = await getProjectFiles(input.projectId);
+        
+        // Generate subdomain
+        const subdomain = generateSubdomain(project.name, ctx.user.id);
+        
+        // Build Docker image
+        const { imageName, buildLogs } = await buildImage({
+          projectId: input.projectId,
+          projectName: project.name,
+          sourceCode: files.map(f => ({ path: f.filePath, content: f.content })),
+          subdomain,
+        });
+        
+        // Deploy container
+        const { containerId, port, deploymentUrl } = await deployContainer({
+          imageName,
+          subdomain,
+        });
+        
+        // Save deployment to database
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [deployment] = await db.insert(builtInDeployments).values({
+          projectId: input.projectId,
+          userId: ctx.user.id,
+          containerId,
+          subdomain,
+          deploymentUrl,
+          port,
+          status: "running",
+          buildLogs,
+        }).$returningId();
+        
+        return {
+          deploymentId: deployment.id,
+          deploymentUrl,
+          subdomain,
+          status: "running",
+        };
+      }),
+    stop: protectedProcedure
+      .input(z.object({ deploymentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { stopContainer } = await import("./dockerService");
+        const { builtInDeployments } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [deployment] = await db.select().from(builtInDeployments)
+          .where(eq(builtInDeployments.id, input.deploymentId));
+        
+        if (!deployment || !deployment.containerId) {
+          throw new Error("Deployment not found");
+        }
+        
+        await stopContainer(deployment.containerId);
+        
+        await db.update(builtInDeployments)
+          .set({ status: "stopped", stoppedAt: new Date() })
+          .where(eq(builtInDeployments.id, input.deploymentId));
+        
+        return { success: true };
+      }),
+    restart: protectedProcedure
+      .input(z.object({ deploymentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { restartContainer } = await import("./dockerService");
+        const { builtInDeployments } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [deployment] = await db.select().from(builtInDeployments)
+          .where(eq(builtInDeployments.id, input.deploymentId));
+        
+        if (!deployment || !deployment.containerId) {
+          throw new Error("Deployment not found");
+        }
+        
+        await restartContainer(deployment.containerId);
+        
+        await db.update(builtInDeployments)
+          .set({ status: "running", updatedAt: new Date() })
+          .where(eq(builtInDeployments.id, input.deploymentId));
+        
+        return { success: true };
+      }),
+    logs: protectedProcedure
+      .input(z.object({ deploymentId: z.number(), tail: z.number().optional() }))
+      .query(async ({ input }) => {
+        const { getContainerLogs } = await import("./dockerService");
+        const { builtInDeployments } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [deployment] = await db.select().from(builtInDeployments)
+          .where(eq(builtInDeployments.id, input.deploymentId));
+        
+        if (!deployment || !deployment.containerId) {
+          throw new Error("Deployment not found");
+        }
+        
+        const logs = await getContainerLogs(deployment.containerId, input.tail || 100);
+        return { logs };
+      }),
+    status: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ input }) => {
+        const { builtInDeployments } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq, desc } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const deployments = await db.select().from(builtInDeployments)
+          .where(eq(builtInDeployments.projectId, input.projectId))
+          .orderBy(desc(builtInDeployments.createdAt));
+        
+        return deployments;
+      }),
+  }),
+
   admin: router({
     costSummary: protectedProcedure
       .query(async ({ ctx }) => {

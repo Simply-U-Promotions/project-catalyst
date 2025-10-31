@@ -50,6 +50,13 @@
       "when": 1761902394783,
       "tag": "0006_public_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1761903443637,
+      "tag": "0007_cooing_norman_osborn",
+      "breakpoints": true
     }
   ]
 }
