@@ -1006,3 +1006,72 @@ Version 2.0 represents a fundamental expansion of Project Catalyst's capabilitie
 - Competitive Advantage: Unique feature set with no direct competitor
 
 Project Catalyst is now positioned to capture significant market share in both greenfield and brownfield markets, with a clear path to $75K MRR within 12 months.
+
+---
+
+## Version 2.1 Updates - Built-in Deployment Infrastructure
+
+**Date:** October 30, 2025
+
+### Feature 11: Built-in Deployment Infrastructure
+
+**Overview:**
+Project Catalyst now includes its own deployment infrastructure, eliminating dependency on external providers (Vercel, Railway, Kubernetes). Users can deploy applications directly to Project Catalyst's infrastructure with zero configuration.
+
+**Business Value:**
+- **Revenue Independence**: No revenue sharing with external deployment providers
+- **User Lock-in**: Users deploy on our infrastructure, increasing platform stickiness
+- **Competitive Differentiation**: True "Manus Lite" - complete end-to-end solution
+- **Cost Control**: Predictable infrastructure costs vs. per-deployment provider fees
+- **Faster Time-to-Market**: No external account setup or API key management required
+
+**Key Capabilities:**
+1. **One-Click Deployment** - Deploy any project with single button click
+2. **Automatic Buildpack Detection** - Nixpacks automatically detects Node.js, Python, Go, static sites
+3. **Subdomain Generation** - Free `yourapp.catalyst.app` subdomain for every deployment
+4. **Real-time Monitoring** - Live deployment status, health checks, and logs
+5. **Resource Management** - CPU (1 core), memory (512MB), storage (1GB) limits per deployment
+6. **Container Orchestration** - Docker-based isolation and management
+7. **Instant Control** - Start, stop, restart deployments anytime
+
+**Updated Competitive Position:**
+
+| Feature | Project Catalyst | Vercel | Railway | Replit |
+|---------|-----------------|---------|---------|--------|
+| AI Code Generation | ✅ | ❌ | ❌ | ✅ |
+| Import Existing Repos | ✅ | ✅ | ✅ | ✅ |
+| AI Code Modification | ✅ | ❌ | ❌ | ❌ |
+| Built-in Deployment | ✅ | ✅ | ✅ | ✅ |
+| External Provider Support | ✅ | ❌ | ❌ | ❌ |
+| GitHub Integration | ✅ | ✅ | ✅ | ✅ |
+| **Price** | **$29/mo** | $20/mo | $5/mo | $7/mo |
+
+**Updated Revenue Model:**
+
+**Deployment Tiers:**
+- **Starter (Included in $29/mo)**: 3 active deployments, 1 CPU core, 512MB RAM each
+- **Pro ($49/mo)**: 10 active deployments, 2 CPU cores, 1GB RAM each, custom domains
+- **Team ($99/mo)**: 50 active deployments, 4 CPU cores, 2GB RAM each, SSL certificates, priority support
+
+**Projected Impact:**
+- **30% conversion** from Starter to Pro tier for users with multiple projects
+- **Additional $20-70/mo** average revenue per upgraded user
+- **Reduced churn** from 15% to 8% due to deployment lock-in
+
+**Updated Financial Projections (Year 1):**
+
+| Month | Users | Starter ($29) | Pro ($49) | Team ($99) | MRR | ARR |
+|-------|-------|---------------|-----------|------------|-----|-----|
+| 1-3 | 50 | 50 | 0 | 0 | $1,450 | $17,400 |
+| 4-6 | 200 | 160 | 35 | 5 | $7,960 | $95,520 |
+| 7-9 | 500 | 350 | 120 | 30 | $19,030 | $228,360 |
+| 10-12 | 1000 | 650 | 280 | 70 | $39,570 | $474,840 |
+
+**Risk Mitigation:**
+- **Infrastructure Costs**: Monitor per-user deployment costs, implement fair use policy
+- **Scalability**: Start with Docker, plan migration to Kubernetes for scale
+- **Reliability**: Implement health checks, automatic restarts, and deployment rollbacks
+- **Security**: Container isolation, resource limits, and network policies
+
+---
+

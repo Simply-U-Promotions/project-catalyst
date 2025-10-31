@@ -266,3 +266,12 @@
 - [ ] Build deployment analytics and metrics
 - [ ] Add custom domain support (future enhancement)
 - [ ] Implement SSL certificate management (future enhancement)
+
+## Documentation Updates (Built-in Deployment)
+- [x] Update BRD with built-in deployment infrastructure value proposition
+- [x] Update BRD competitive analysis to reflect self-hosting capability
+- [x] Update BRD revenue model with deployment pricing tiers
+- [x] Update FRD with Docker container management specifications
+- [x] Update FRD with deployment API documentation
+- [x] Update FRD with infrastructure architecture diagrams
+- [x] Update FRD with security and resource management details

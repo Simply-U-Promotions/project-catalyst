@@ -2424,3 +2424,312 @@ Version 2.0 of Project Catalyst introduces significant functional enhancements t
 - Performance meets or exceeds all targets
 
 Project Catalyst Version 2.0 is production-ready and positioned for market launch.
+
+---
+
+## Version 2.1 Updates - Built-in Deployment Infrastructure
+
+**Date:** October 30, 2025
+
+### Module 11: Built-in Deployment Infrastructure
+
+**Overview:**
+Complete deployment infrastructure enabling Project Catalyst to host and run user applications directly without external providers.
+
+#### 11.1 Architecture
+
+**Technology Stack:**
+- **Container Runtime**: Docker Engine 24.0+
+- **Buildpack System**: Nixpacks (automatic language detection)
+- **Reverse Proxy**: Traefik 2.10+ (planned)
+- **Database**: MySQL (deployment metadata)
+- **Orchestration**: Docker Compose (MVP), Kubernetes (future)
+
+**System Components:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     User Interface                           │
+│  (Deploy Button → Build Logs → Status → Control Panel)      │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Deployment API Layer                        │
+│   /deploy  /stop  /restart  /logs  /status                  │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Docker Service (dockerService.ts)               │
+│  • buildImage()    • deployContainer()                       │
+│  • stopContainer() • restartContainer()                      │
+│  • getContainerLogs() • checkContainerHealth()              │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Docker Engine                              │
+│  Container 1 (app-abc.catalyst.app) → Port 3001             │
+│  Container 2 (app-xyz.catalyst.app) → Port 3002             │
+│  Container 3 (app-123.catalyst.app) → Port 3003             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 11.2 Database Schema
+
+**built_in_deployments Table:**
+```sql
+CREATE TABLE built_in_deployments (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  projectId INT NOT NULL,
+  userId INT NOT NULL,
+  containerId VARCHAR(255),
+  subdomain VARCHAR(255) UNIQUE NOT NULL,
+  deploymentUrl VARCHAR(500) NOT NULL,
+  status ENUM('pending', 'building', 'running', 'stopped', 'failed'),
+  buildLogs TEXT,
+  runtimeLogs TEXT,
+  errorMessage TEXT,
+  port INT,
+  cpuLimit INT DEFAULT 1000,      -- millicores
+  memoryLimit INT DEFAULT 512,     -- MB
+  storageLimit INT DEFAULT 1024,   -- MB
+  healthCheckUrl VARCHAR(500),
+  lastHealthCheck TIMESTAMP,
+  healthStatus ENUM('healthy', 'unhealthy', 'unknown'),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  stoppedAt TIMESTAMP
+);
+```
+
+**deployment_logs Table:**
+```sql
+CREATE TABLE deployment_logs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  deploymentId INT NOT NULL,
+  logType ENUM('build', 'runtime', 'error') NOT NULL,
+  message TEXT NOT NULL,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### 11.3 API Specifications
+
+**Deploy Project**
+```typescript
+POST /api/trpc/builtInDeployment.deploy
+Input: { projectId: number }
+Output: {
+  deploymentId: number,
+  deploymentUrl: string,
+  subdomain: string,
+  status: "running"
+}
+```
+
+**Stop Deployment**
+```typescript
+POST /api/trpc/builtInDeployment.stop
+Input: { deploymentId: number }
+Output: { success: boolean }
+```
+
+**Restart Deployment**
+```typescript
+POST /api/trpc/builtInDeployment.restart
+Input: { deploymentId: number }
+Output: { success: boolean }
+```
+
+**Get Deployment Logs**
+```typescript
+GET /api/trpc/builtInDeployment.logs
+Input: { deploymentId: number, tail?: number }
+Output: { logs: string }
+```
+
+**Get Deployment Status**
+```typescript
+GET /api/trpc/builtInDeployment.status
+Input: { projectId: number }
+Output: BuiltInDeployment[]
+```
+
+#### 11.4 Deployment Workflow
+
+**Step 1: Build Phase**
+1. User clicks "Deploy to Catalyst" button
+2. System fetches project files from database
+3. Creates temporary build directory (`/tmp/builds/{subdomain}-{timestamp}`)
+4. Writes all source files to build directory
+5. Runs Nixpacks to detect language/framework
+6. Generates Dockerfile automatically
+7. Builds Docker image: `catalyst-{subdomain}:latest`
+8. Streams build logs to frontend in real-time
+
+**Step 2: Deploy Phase**
+1. Finds available port (3000-9000 range)
+2. Generates unique subdomain: `{project-name}-{random}.catalyst.app`
+3. Runs Docker container with resource limits:
+   - CPU: 1000 millicores (1 core)
+   - Memory: 512MB
+   - Storage: 1GB
+4. Maps container port to host port
+5. Labels container with subdomain for routing
+6. Saves deployment record to database
+
+**Step 3: Routing Phase** (Planned)
+1. Traefik reverse proxy detects new container via Docker labels
+2. Automatically configures route: `subdomain.catalyst.app` → `localhost:port`
+3. Generates SSL certificate via Let's Encrypt
+4. Enables HTTPS traffic
+
+**Step 4: Monitoring Phase**
+1. Health check every 30 seconds
+2. Log aggregation from container stdout/stderr
+3. Status updates in database
+4. Frontend polls status every 5 seconds
+
+#### 11.5 Supported Languages & Frameworks
+
+**Automatic Detection via Nixpacks:**
+
+| Language | Detection File | Build Command | Start Command |
+|----------|---------------|---------------|---------------|
+| Node.js | package.json | npm install && npm run build | npm start |
+| Python | requirements.txt | pip install -r requirements.txt | python app.py |
+| Go | go.mod | go build | ./main |
+| Static | index.html | - | npx serve -s . |
+| Ruby | Gemfile | bundle install | bundle exec ruby app.rb |
+| PHP | composer.json | composer install | php -S 0.0.0.0:8000 |
+
+#### 11.6 Resource Management
+
+**Default Limits (Starter Tier):**
+- **CPU**: 1000 millicores (1 core)
+- **Memory**: 512MB RAM
+- **Storage**: 1GB disk
+- **Network**: Unlimited bandwidth
+- **Concurrent Deployments**: 3 active containers
+
+**Pro Tier Limits:**
+- **CPU**: 2000 millicores (2 cores)
+- **Memory**: 1GB RAM
+- **Storage**: 5GB disk
+- **Concurrent Deployments**: 10 active containers
+
+**Team Tier Limits:**
+- **CPU**: 4000 millicores (4 cores)
+- **Memory**: 2GB RAM
+- **Storage**: 10GB disk
+- **Concurrent Deployments**: 50 active containers
+
+#### 11.7 Security Measures
+
+**Container Isolation:**
+- Each deployment runs in isolated Docker container
+- No shared filesystem between containers
+- Network isolation via Docker networks
+- Read-only root filesystem (where possible)
+
+**Resource Enforcement:**
+- Hard CPU limits via Docker `--cpus` flag
+- Hard memory limits via Docker `--memory` flag
+- Storage quotas via Docker volume limits
+- Process limits to prevent fork bombs
+
+**Access Control:**
+- Only container owner can stop/restart
+- Admin role can manage all deployments
+- Deployment logs accessible only to owner
+- No SSH access to containers
+
+#### 11.8 Monitoring & Observability
+
+**Health Checks:**
+- HTTP health check endpoint (if configured)
+- Container status monitoring
+- Automatic restart on crash
+- Alert on repeated failures
+
+**Logging:**
+- Stdout/stderr capture
+- Structured log storage
+- Real-time log streaming to frontend
+- Log retention: 7 days (configurable)
+
+**Metrics (Future):**
+- CPU usage percentage
+- Memory usage percentage
+- Network I/O
+- Request count & latency
+- Error rate
+
+#### 11.9 Deployment Lifecycle
+
+**States:**
+1. **pending** - Deployment queued, waiting to start
+2. **building** - Docker image being built
+3. **running** - Container active and healthy
+4. **stopped** - Container stopped by user
+5. **failed** - Build or runtime failure
+
+**Transitions:**
+```
+pending → building → running
+                  ↓
+              failed
+
+running → stopped → running (restart)
+```
+
+#### 11.10 Future Enhancements
+
+**Phase 2 (Q1 2026):**
+- Traefik reverse proxy integration
+- Automatic SSL certificates
+- Custom domain support
+- Horizontal autoscaling
+
+**Phase 3 (Q2 2026):**
+- Kubernetes migration for scale
+- Multi-region deployments
+- Database provisioning (PostgreSQL, MySQL, Redis)
+- Scheduled deployments & rollbacks
+
+**Phase 4 (Q3 2026):**
+- CDN integration
+- DDoS protection
+- Advanced monitoring & alerting
+- Team collaboration features
+
+---
+
+### Updated System Architecture
+
+**Complete Platform Stack:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                   Frontend (React)                        │
+│  Dashboard | Project Detail | Deploy UI | Cost Monitor   │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────────┐
+│                Backend API (tRPC + Express)               │
+│  Auth | Projects | AI | GitHub | Deployment | Admin     │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        ▼            ▼            ▼
+┌─────────────┐ ┌────────┐ ┌──────────────┐
+│   MySQL DB  │ │  LLM   │ │Docker Engine │
+│  (Metadata) │ │  API   │ │ (Containers) │
+└─────────────┘ └────────┘ └──────────────┘
+```
+
+---
+
