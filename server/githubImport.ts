@@ -376,7 +376,7 @@ export async function commitFilesToBranch(
 /**
  * Parse GitHub URL to extract owner and repo name
  */
-function parseGitHubUrl(url: string): { owner: string; repo: string } {
+export function parseGitHubUrl(url: string): { owner: string; repo: string } {
   // Handle various GitHub URL formats
   // https://github.com/owner/repo
   // https://github.com/owner/repo.git
