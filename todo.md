@@ -275,3 +275,13 @@
 - [x] Update FRD with deployment API documentation
 - [x] Update FRD with infrastructure architecture diagrams
 - [x] Update FRD with security and resource management details
+
+## Documentation Corrections (Version 2.1)
+- [x] Fix document dates from January 30 to October 30, 2025
+- [x] Add proper version numbering (2.1) throughout documents
+- [x] Add security features to BRD (cost monitoring, prompt injection, kill switches)
+- [x] Add security features to FRD (technical specs for all security measures)
+- [x] Add infrastructure architecture strategy to BRD (serverless backend, Docker deployments)
+- [x] Document decision to avoid Kubernetes until Year 2
+- [x] Create clean, consolidated Version 2.1 documents
+- [x] Remove duplicate/appended sections
