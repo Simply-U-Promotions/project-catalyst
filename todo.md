@@ -17,11 +17,15 @@
 - [x] Implement file structure output with syntax highlighting
 
 ## Phase 3: GitHub Integration
-- [ ] Set up GitHub OAuth integration
-- [ ] Implement repository creation from generated code
-- [ ] Add automatic commit and push functionality
-- [ ] Create webhook system for deployment triggers
-- [ ] Build branch management features
+- [x] Set up GitHub OAuth integration (using personal access token)
+- [x] Implement repository creation from generated code
+- [x] Add automatic commit and push functionality
+- [x] Create webhook system for deployment triggers
+- [x] Build branch management features
+- [x] Add createBranch, deleteBranch, listBranches, mergeBranch endpoints
+- [x] Add createWebhook, deleteWebhook, listWebhooks endpoints
+- [x] Implement batch file commit functionality
+- [x] Add branch protection status checking
 
 ## Phase 4: PaaS Deployment System
 - [ ] Design deployment architecture (Docker/Kubernetes simulation)

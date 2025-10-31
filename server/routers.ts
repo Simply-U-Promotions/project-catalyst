@@ -334,6 +334,54 @@ Return ONLY the JSON array, no additional text.`;
         
         return pr;
       }),
+    // Branch management endpoints
+    createBranch: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string(), branchName: z.string(), fromBranch: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const { createBranch } = await import("./githubBranches");
+        await createBranch(input);
+        return { success: true };
+      }),
+    deleteBranch: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string(), branchName: z.string() }))
+      .mutation(async ({ input }) => {
+        const { deleteBranch } = await import("./githubBranches");
+        await deleteBranch(input);
+        return { success: true };
+      }),
+    listBranches: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string() }))
+      .query(async ({ input }) => {
+        const { listBranches } = await import("./githubBranches");
+        return await listBranches(input);
+      }),
+    mergeBranch: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string(), head: z.string(), base: z.string(), commitMessage: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const { mergeBranch } = await import("./githubBranches");
+        await mergeBranch(input);
+        return { success: true };
+      }),
+    // Webhook management endpoints
+    createWebhook: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string(), webhookUrl: z.string(), events: z.array(z.string()).optional(), secret: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const { createWebhook } = await import("./githubWebhooks");
+        return await createWebhook(input);
+      }),
+    deleteWebhook: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string(), hookId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deleteWebhook } = await import("./githubWebhooks");
+        await deleteWebhook(input);
+        return { success: true };
+      }),
+    listWebhooks: protectedProcedure
+      .input(z.object({ owner: z.string(), repo: z.string() }))
+      .query(async ({ input }) => {
+        const { listWebhooks } = await import("./githubWebhooks");
+        return await listWebhooks(input);
+      }),
     modifyCode: protectedProcedure
       .input(z.object({ projectId: z.number(), description: z.string() }))
       .mutation(async ({ input, ctx }) => {
