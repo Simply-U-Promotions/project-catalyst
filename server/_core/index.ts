@@ -35,6 +35,26 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // Preview endpoint for generated projects
+  app.get("/api/preview/:projectId", async (req, res) => {
+    try {
+      const { generatePreviewHTML } = await import("../previewService");
+      const projectId = parseInt(req.params.projectId);
+      
+      if (isNaN(projectId)) {
+        return res.status(400).send("Invalid project ID");
+      }
+      
+      const html = await generatePreviewHTML(projectId);
+      res.setHeader("Content-Type", "text/html");
+      res.send(html);
+    } catch (error) {
+      console.error("Preview error:", error);
+      res.status(500).send("Failed to generate preview");
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",

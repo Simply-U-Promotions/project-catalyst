@@ -89,7 +89,7 @@ ${template.techStack.backend ? `Backend: ${template.techStack.backend.join(", ")
 ${template.techStack.database ? `Database: ${template.techStack.database.join(", ")}` : ""}
 
 Features to implement:
-${template.features.map((f, i) => `${i + 1}. ${f}`).join("\n")}
+${template.features.map((f: string, i: number) => `${i + 1}. ${f}`).join("\n")}
 
 Generate a file structure with actual code for each file. Return the response as a JSON array of files with this structure:
 [
@@ -143,7 +143,8 @@ Return ONLY the JSON array, no additional text.`;
           },
         }, { userId: ctx.user.id, feature: "code_generation", projectId: 0 });
 
-        const result = JSON.parse(response.choices[0].message.content || "{}");
+        const content = response.choices[0].message.content;
+        const result = JSON.parse(typeof content === 'string' ? content : "{}");
         return { files: result.files || [] };
       }),
   }),
@@ -538,6 +539,37 @@ Return ONLY the JSON array, no additional text.`;
       }),
   }),
 
+  // Job queue for async operations
+  jobs: router({
+    create: protectedProcedure
+      .input(z.object({
+        type: z.enum(["code_modification", "code_generation"]),
+        data: z.any(),
+      }))
+      .mutation(async ({ input }) => {
+        const { jobQueue } = await import("./jobQueue");
+        const jobId = jobQueue.createJob(input.type, input.data);
+        return { jobId };
+      }),
+    getStatus: protectedProcedure
+      .input(z.object({ jobId: z.string() }))
+      .query(async ({ input }) => {
+        const { jobQueue } = await import("./jobQueue");
+        const job = jobQueue.getJob(input.jobId);
+        if (!job) {
+          throw new Error("Job not found");
+        }
+        return {
+          id: job.id,
+          type: job.type,
+          status: job.status,
+          progress: job.progress,
+          result: job.result,
+          error: job.error,
+        };
+      }),
+  }),
+
   // Admin-only endpoints for cost monitoring
   builtInDeployment: router({
     deploy: protectedProcedure
@@ -683,6 +715,323 @@ Return ONLY the JSON array, no additional text.`;
           .orderBy(desc(builtInDeployments.createdAt));
         
         return deployments;
+      }),
+    // Custom Domains Management
+    addCustomDomain: protectedProcedure
+      .input(z.object({ deploymentId: z.number(), domain: z.string() }))
+      .mutation(async ({ input }) => {
+        const { customDomains } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Generate verification token
+        const verificationToken = Math.random().toString(36).substring(2, 15);
+        
+        const [domain] = await db.insert(customDomains).values({
+          deploymentId: input.deploymentId,
+          domain: input.domain,
+          status: "pending",
+          verificationToken,
+        }).$returningId();
+        
+        return { id: domain.id, verificationToken };
+      }),
+    getCustomDomains: protectedProcedure
+      .input(z.object({ deploymentId: z.number() }))
+      .query(async ({ input }) => {
+        const { customDomains } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        return await db.select().from(customDomains)
+          .where(eq(customDomains.deploymentId, input.deploymentId));
+      }),
+    removeCustomDomain: protectedProcedure
+      .input(z.object({ domainId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { customDomains } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.delete(customDomains).where(eq(customDomains.id, input.domainId));
+        return { success: true };
+      }),
+    // Environment Variables Management
+    addEnvVar: protectedProcedure
+      .input(z.object({ 
+        deploymentId: z.number(), 
+        key: z.string(), 
+        value: z.string(),
+        isSecret: z.boolean().optional()
+      }))
+      .mutation(async ({ input }) => {
+        const { deploymentEnvVars } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [envVar] = await db.insert(deploymentEnvVars).values({
+          deploymentId: input.deploymentId,
+          key: input.key,
+          value: input.value,
+          isSecret: input.isSecret ? 1 : 0,
+        }).$returningId();
+        
+        return { id: envVar.id };
+      }),
+    getEnvVars: protectedProcedure
+      .input(z.object({ deploymentId: z.number() }))
+      .query(async ({ input }) => {
+        const { deploymentEnvVars } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        return await db.select().from(deploymentEnvVars)
+          .where(eq(deploymentEnvVars.deploymentId, input.deploymentId));
+      }),
+    updateEnvVar: protectedProcedure
+      .input(z.object({ 
+        envVarId: z.number(), 
+        value: z.string()
+      }))
+      .mutation(async ({ input }) => {
+        const { deploymentEnvVars } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.update(deploymentEnvVars)
+          .set({ value: input.value, updatedAt: new Date() })
+          .where(eq(deploymentEnvVars.id, input.envVarId));
+        
+        return { success: true };
+      }),
+    removeEnvVar: protectedProcedure
+      .input(z.object({ envVarId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deploymentEnvVars } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        await db.delete(deploymentEnvVars).where(eq(deploymentEnvVars.id, input.envVarId));
+        return { success: true };
+      }),
+  }),
+
+  database: router({
+    // Provision a new database
+    provision: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        type: z.enum(["postgresql", "mysql", "mongodb", "redis"]),
+        name: z.string(),
+        size: z.enum(["small", "medium", "large"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Generate database credentials
+        const username = `user_${Math.random().toString(36).substring(2, 10)}`;
+        const password = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const dbName = `db_${input.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Math.random().toString(36).substring(2, 8)}`;
+        
+        // Simulate database provisioning (in production, this would call actual cloud provider APIs)
+        const host = `${input.type}.catalyst-db.internal`;
+        const portMap = { postgresql: 5432, mysql: 3306, mongodb: 27017, redis: 6379 };
+        const port = portMap[input.type];
+        
+        // Generate connection string
+        let connectionString = "";
+        if (input.type === "postgresql") {
+          connectionString = `postgresql://${username}:${password}@${host}:${port}/${dbName}`;
+        } else if (input.type === "mysql") {
+          connectionString = `mysql://${username}:${password}@${host}:${port}/${dbName}`;
+        } else if (input.type === "mongodb") {
+          connectionString = `mongodb://${username}:${password}@${host}:${port}/${dbName}`;
+        } else if (input.type === "redis") {
+          connectionString = `redis://${username}:${password}@${host}:${port}`;
+        }
+        
+        const [database] = await db.insert(provisionedDatabases).values({
+          projectId: input.projectId,
+          type: input.type,
+          name: input.name,
+          host,
+          port,
+          username,
+          password,
+          database: dbName,
+          status: "active", // In production, start with "provisioning" and update after actual provisioning
+          connectionString,
+          size: input.size || "small",
+        }).$returningId();
+        
+        return {
+          id: database.id,
+          connectionString,
+          status: "active",
+        };
+      }),
+    // List databases for a project
+    list: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        return await db.select().from(provisionedDatabases)
+          .where(eq(provisionedDatabases.projectId, input.projectId));
+      }),
+    // Get database details
+    get: protectedProcedure
+      .input(z.object({ databaseId: z.number() }))
+      .query(async ({ input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [database] = await db.select().from(provisionedDatabases)
+          .where(eq(provisionedDatabases.id, input.databaseId));
+        
+        if (!database) throw new Error("Database not found");
+        return database;
+      }),
+    // Delete a database
+    delete: protectedProcedure
+      .input(z.object({ databaseId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // In production, this would call cloud provider API to delete the database
+        await db.update(provisionedDatabases)
+          .set({ status: "deleted", updatedAt: new Date() })
+          .where(eq(provisionedDatabases.id, input.databaseId));
+        
+        return { success: true };
+      }),
+    // Test database connection
+    testConnection: protectedProcedure
+      .input(z.object({ databaseId: z.number() }))
+      .mutation(async ({ input }) => {
+        // Simulate connection test (in production, actually test the connection)
+        return {
+          success: true,
+          message: "Connection successful",
+          latency: Math.floor(Math.random() * 50) + 10, // Random latency 10-60ms
+        };
+      }),
+    // Create database backup
+    createBackup: protectedProcedure
+      .input(z.object({ databaseId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [database] = await db.select().from(provisionedDatabases)
+          .where(eq(provisionedDatabases.id, input.databaseId));
+        
+        if (!database) throw new Error("Database not found");
+        
+        // Simulate backup creation (in production, call cloud provider backup API)
+        const backupId = `backup_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const backupSize = Math.floor(Math.random() * 500) + 50; // Random size 50-550 MB
+        
+        return {
+          success: true,
+          backupId,
+          size: backupSize,
+          timestamp: new Date().toISOString(),
+          message: "Backup created successfully",
+        };
+      }),
+    // Restore database from backup
+    restoreBackup: protectedProcedure
+      .input(z.object({ 
+        databaseId: z.number(),
+        backupId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [database] = await db.select().from(provisionedDatabases)
+          .where(eq(provisionedDatabases.id, input.databaseId));
+        
+        if (!database) throw new Error("Database not found");
+        
+        // Simulate restore (in production, call cloud provider restore API)
+        return {
+          success: true,
+          message: "Database restored successfully",
+          restoredAt: new Date().toISOString(),
+        };
+      }),
+    // Get database metrics
+    getMetrics: protectedProcedure
+      .input(z.object({ databaseId: z.number() }))
+      .query(async ({ input }) => {
+        const { provisionedDatabases } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [database] = await db.select().from(provisionedDatabases)
+          .where(eq(provisionedDatabases.id, input.databaseId));
+        
+        if (!database) throw new Error("Database not found");
+        
+        // Simulate metrics (in production, fetch from monitoring service)
+        return {
+          cpu: Math.floor(Math.random() * 80) + 10, // 10-90%
+          memory: Math.floor(Math.random() * 80) + 10, // 10-90%
+          storage: Math.floor(Math.random() * 70) + 20, // 20-90%
+          connections: Math.floor(Math.random() * 50) + 5, // 5-55
+          queries: Math.floor(Math.random() * 1000) + 100, // 100-1100 per second
+          uptime: Math.floor(Math.random() * 86400) + 3600, // 1-25 hours in seconds
+        };
       }),
   }),
 

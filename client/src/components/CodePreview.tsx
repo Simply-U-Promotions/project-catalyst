@@ -221,7 +221,7 @@ function renderFileTree(
   selectedFile: FileNode | null,
   setSelectedFile: (file: FileNode) => void,
   depth: number = 0
-): JSX.Element[] {
+): React.ReactElement[] {
   return nodes.map(node => (
     <div key={node.path} style={{ paddingLeft: `${depth * 12}px` }}>
       {node.type === "folder" ? (

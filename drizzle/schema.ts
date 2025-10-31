@@ -216,3 +216,40 @@ export const deploymentLogs = mysqlTable("deployment_logs", {
 
 export type DeploymentLog = typeof deploymentLogs.$inferSelect;
 export type InsertDeploymentLog = typeof deploymentLogs.$inferInsert;
+
+/**
+ * Custom domains - stores custom domain configurations for deployments
+ */
+export const customDomains = mysqlTable("custom_domains", {
+  id: int("id").autoincrement().primaryKey(),
+  deploymentId: int("deploymentId").notNull().references(() => builtInDeployments.id),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "verifying", "active", "failed"]).default("pending").notNull(),
+  sslStatus: mysqlEnum("sslStatus", ["none", "pending", "active", "expired", "failed"]).default("none").notNull(),
+  sslCertificate: text("sslCertificate"), // SSL certificate content
+  sslPrivateKey: text("sslPrivateKey"), // SSL private key (encrypted)
+  sslExpiresAt: timestamp("sslExpiresAt"),
+  verificationToken: varchar("verificationToken", { length: 255 }), // For domain verification
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CustomDomain = typeof customDomains.$inferSelect;
+export type InsertCustomDomain = typeof customDomains.$inferInsert;
+
+/**
+ * Deployment environment variables - stores env vars for deployments
+ */
+export const deploymentEnvVars = mysqlTable("deployment_env_vars", {
+  id: int("id").autoincrement().primaryKey(),
+  deploymentId: int("deploymentId").notNull().references(() => builtInDeployments.id),
+  key: varchar("key", { length: 255 }).notNull(),
+  value: text("value").notNull(), // Should be encrypted in production
+  isSecret: int("isSecret").default(0).notNull(), // 0 = public, 1 = secret (masked in UI)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DeploymentEnvVar = typeof deploymentEnvVars.$inferSelect;
+export type InsertDeploymentEnvVar = typeof deploymentEnvVars.$inferInsert;

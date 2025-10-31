@@ -86,7 +86,7 @@ export default function NewProjectEnhanced() {
     createProjectMutation.mutate({
       name: name.trim(),
       description: description.trim() || undefined,
-      templateId: selectedTemplate,
+      templateId: selectedTemplate ? parseInt(selectedTemplate) : undefined,
       files: generatedFiles,
     });
   };

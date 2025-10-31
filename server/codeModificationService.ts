@@ -43,16 +43,24 @@ Change Request: ${description}
 Available Files:
 ${files.map((f) => `- ${f.path} (${f.language || "unknown"})`).join("\n")}
 
+**ANALYSIS GUIDELINES:**
+1. Identify the MINIMUM set of files that need modification
+2. Consider the impact on existing functionality
+3. Avoid modifying files unless absolutely necessary
+4. Think about dependencies and side effects
+5. Preserve the existing architecture and patterns
+
 Analyze the request and determine:
-1. Which files need to be modified
+1. Which files need to be modified (be conservative)
 2. What changes are needed in each file
 3. A brief summary of the modifications
+4. Why these specific files need to be changed
 
 Respond in JSON format:
 {
   "filesToModify": ["path1", "path2"],
   "summary": "Brief description of changes",
-  "reasoning": "Why these files need to be changed"
+  "reasoning": "Why these files need to be changed and what will be preserved"
 }`;
 
   const analysisResponse = await invokeLLM({
@@ -116,12 +124,19 @@ Current File Content:
 ${fileToModify.content}
 \`\`\`
 
-Generate the COMPLETE modified file content that implements the requested change. Include all existing code with your modifications integrated properly.
+**CRITICAL INSTRUCTIONS:**
+1. PRESERVE ALL EXISTING FUNCTIONALITY - Do not remove or break any existing features
+2. Generate the COMPLETE modified file content with your changes integrated
+3. Maintain the existing code style, patterns, and architecture
+4. Only modify what is necessary to implement the requested change
+5. Keep all imports, exports, and dependencies intact
+6. Preserve all comments, error handling, and edge cases
+7. Ensure backward compatibility with existing code that depends on this file
 
 Respond in JSON format:
 {
   "modifiedContent": "complete file content with modifications",
-  "explanation": "brief explanation of what was changed"
+  "explanation": "brief explanation of what was changed and what was preserved"
 }`;
 
     const modificationResponse = await invokeLLM({

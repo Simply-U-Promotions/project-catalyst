@@ -9,11 +9,13 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
-import FileExplorer from "@/components/FileExplorer";
+import FileExplorerEnhanced from "@/components/FileExplorerEnhanced";
 import Deployments from "@/components/Deployments";
 import CodeModification from "@/components/CodeModification";
 import CodebaseSummary from "@/components/CodebaseSummary";
-import BuiltInDeployment from "@/components/BuiltInDeployment";
+import BuiltInDeploymentEnhanced from "@/components/BuiltInDeploymentEnhanced";
+import PreviewFrame from "@/components/PreviewFrame";
+import DatabaseManagerEnhanced from "@/components/DatabaseManagerEnhanced";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProjectDetail() {
@@ -164,6 +166,13 @@ export default function ProjectDetail() {
               </TabsTrigger>
             )}
             <TabsTrigger value="chat">Chat</TabsTrigger>
+            <TabsTrigger value="preview" className="gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Preview
+            </TabsTrigger>
             <TabsTrigger value="files" className="gap-2">
               <FileCode className="h-4 w-4" />
               Files {files.length > 0 && `(${files.length})`}
@@ -182,6 +191,12 @@ export default function ProjectDetail() {
               </svg>
               Deploy to Catalyst
             </TabsTrigger>
+            <TabsTrigger value="database" className="gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+              Database
+            </TabsTrigger>
             <TabsTrigger value="deployments" className="gap-2">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -195,6 +210,33 @@ export default function ProjectDetail() {
               <CodebaseSummary projectId={projectId} />
             </TabsContent>
           )}
+
+          <TabsContent value="preview" className="flex-1">
+            <Card className="flex-1 flex flex-col h-full">
+              <CardHeader>
+                <CardTitle>Live Preview</CardTitle>
+                <CardDescription>
+                  Preview your generated application
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col p-0">
+                {files.length === 0 ? (
+                  <div className="flex items-center justify-center h-full p-8">
+                    <div className="text-center text-muted-foreground">
+                      <svg className="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <p className="text-lg font-medium">No Preview Available</p>
+                      <p className="text-sm mt-2">Generate code first to see a preview</p>
+                    </div>
+                  </div>
+                ) : (
+                  <PreviewFrame projectId={projectId} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="chat" className="flex-1">
             <Card className="flex-1 flex flex-col h-full">
@@ -273,7 +315,7 @@ export default function ProjectDetail() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <FileExplorer
+              <FileExplorerEnhanced
                 files={files.map((f: any) => ({
                   id: f.id.toString(),
                   path: f.filePath,
@@ -291,7 +333,11 @@ export default function ProjectDetail() {
           )}
 
           <TabsContent value="catalyst">
-            <BuiltInDeployment projectId={projectId} />
+            <BuiltInDeploymentEnhanced projectId={projectId} />
+          </TabsContent>
+
+          <TabsContent value="database">
+            <DatabaseManagerEnhanced projectId={projectId} />
           </TabsContent>
 
           <TabsContent value="deployments">

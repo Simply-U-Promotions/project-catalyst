@@ -25,16 +25,31 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     // Optimize for memory efficiency
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split vendor chunks to reduce memory usage during build
-          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
-          'router': ['wouter'],
-          'ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-slot'],
-          'trpc': ['@trpc/client', '@trpc/react-query', '@tanstack/react-query'],
-          'utils': ['clsx', 'tailwind-merge', 'class-variance-authority'],
+        manualChunks(id) {
+          // Aggressive code splitting to reduce memory usage
+          if (id.includes('node_modules')) {
+            // Split large libraries into separate chunks
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@trpc') || id.includes('@tanstack')) {
+              return 'trpc-vendor';
+            }
+            if (id.includes('@radix-ui')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            if (id.includes('mermaid') || id.includes('cytoscape') || id.includes('highlight.js')) {
+              return 'heavy-libs';
+            }
+            // All other node_modules go into vendor chunk
+            return 'vendor';
+          }
         },
       },
     },
@@ -43,6 +58,8 @@ export default defineConfig({
     target: 'es2020',
     // Optimize source maps for production
     sourcemap: false,
+    // Increase chunk size limit to prevent warnings
+    cssCodeSplit: true,
   },
   server: {
     host: true,

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { 
   Rocket, 
@@ -12,25 +13,28 @@ import {
   XCircle, 
   Loader2,
   Terminal,
-  Globe
+  Globe,
+  History,
+  Settings
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import CustomDomainsManager from "./CustomDomainsManager";
+import EnvVarsManager from "./EnvVarsManager";
 
-interface BuiltInDeploymentProps {
+interface BuiltInDeploymentEnhancedProps {
   projectId: number;
 }
 
-export default function BuiltInDeployment({ projectId }: BuiltInDeploymentProps) {
+export default function BuiltInDeploymentEnhanced({ projectId }: BuiltInDeploymentEnhancedProps) {
   const [showLogs, setShowLogs] = useState(false);
+  const [selectedDeploymentId, setSelectedDeploymentId] = useState<number | null>(null);
 
-  // Fetch deployment status
+  // Fetch all deployments (history)
   const { data: deployments, isLoading, refetch } = trpc.builtInDeployment.status.useQuery(
     { projectId },
-    { refetchInterval: 5000 } // Poll every 5 seconds
+    { refetchInterval: 5000 }
   );
-
-  const [selectedDeploymentId, setSelectedDeploymentId] = useState<number | null>(null);
 
   // Deploy mutation
   const deployMutation = trpc.builtInDeployment.deploy.useMutation({
@@ -67,13 +71,17 @@ export default function BuiltInDeployment({ projectId }: BuiltInDeploymentProps)
 
   // Get logs query
   const { data: logsData, refetch: refetchLogs } = trpc.builtInDeployment.logs.useQuery(
-    { deploymentId: deployments?.[0]?.id || 0, tail: 100 },
-    { enabled: showLogs && !!deployments?.[0]?.id }
+    { deploymentId: selectedDeploymentId || deployments?.[0]?.id || 0, tail: 100 },
+    { 
+      enabled: showLogs && !!(selectedDeploymentId || deployments?.[0]?.id),
+      refetchInterval: showLogs ? 3000 : false // Auto-refresh logs every 3 seconds when visible
+    }
   );
 
   const latestDeployment = deployments?.[0];
   const isDeploying = deployMutation.isPending;
   const isActive = latestDeployment?.status === "running";
+  const activeDeploymentId = selectedDeploymentId || latestDeployment?.id;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -129,7 +137,7 @@ export default function BuiltInDeployment({ projectId }: BuiltInDeploymentProps)
 
         {latestDeployment && (
           <CardContent className="space-y-4">
-            {/* Deployment Info */}
+            {/* Current Deployment Info */}
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -196,26 +204,100 @@ export default function BuiltInDeployment({ projectId }: BuiltInDeploymentProps)
               </div>
             </div>
 
-            {/* Logs Section */}
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowLogs(!showLogs);
-                  if (!showLogs) refetchLogs();
-                }}
-              >
-                <Terminal className="w-4 h-4 mr-2" />
-                {showLogs ? "Hide Logs" : "View Logs"}
-              </Button>
+            {/* Tabs for different sections */}
+            <Tabs defaultValue="logs" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="logs">
+                  <Terminal className="w-4 h-4 mr-2" />
+                  Logs
+                </TabsTrigger>
+                <TabsTrigger value="history">
+                  <History className="w-4 h-4 mr-2" />
+                  History
+                </TabsTrigger>
+                <TabsTrigger value="domains">
+                  <Globe className="w-4 h-4 mr-2" />
+                  Domains
+                </TabsTrigger>
+                <TabsTrigger value="env">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Env Vars
+                </TabsTrigger>
+              </TabsList>
 
-              {showLogs && (
-                <div className="mt-4 p-4 bg-black text-green-400 rounded-lg font-mono text-xs overflow-auto max-h-96">
+              <TabsContent value="logs" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Real-time logs (auto-refreshing every 3 seconds)
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchLogs()}
+                  >
+                    <RotateCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+                <div className="p-4 bg-black text-green-400 rounded-lg font-mono text-xs overflow-auto max-h-96">
                   <pre>{logsData?.logs || "No logs available"}</pre>
                 </div>
-              )}
-            </div>
+              </TabsContent>
+
+              <TabsContent value="history" className="space-y-4">
+                {deployments && deployments.length > 1 ? (
+                  <div className="space-y-2">
+                    {deployments.map((deployment, index) => (
+                      <div
+                        key={deployment.id}
+                        className={`p-4 border rounded-lg ${
+                          index === 0 ? "border-primary" : ""
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {index === 0 && <Badge>Current</Badge>}
+                              {getStatusBadge(deployment.status)}
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(deployment.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-sm font-mono">{deployment.subdomain}.catalyst.app</p>
+                          </div>
+                          {index > 0 && deployment.status !== "running" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                toast.info("Rollback feature coming soon!");
+                                // TODO: Implement rollback
+                              }}
+                            >
+                              <History className="w-4 h-4 mr-2" />
+                              Rollback
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No deployment history yet</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="domains">
+                {activeDeploymentId && <CustomDomainsManager deploymentId={activeDeploymentId} />}
+              </TabsContent>
+
+              <TabsContent value="env">
+                {activeDeploymentId && <EnvVarsManager deploymentId={activeDeploymentId} />}
+              </TabsContent>
+            </Tabs>
 
             {/* Resource Info */}
             <Alert>
@@ -249,11 +331,11 @@ export default function BuiltInDeployment({ projectId }: BuiltInDeploymentProps)
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span><strong>Real-time logs</strong> - Monitor your application instantly</span>
+                <span><strong>Custom domains</strong> - Add your own domain with SSL</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <span><strong>One-click management</strong> - Start, stop, restart anytime</span>
+                <span><strong>Environment variables</strong> - Secure configuration management</span>
               </li>
             </ul>
           </CardContent>
