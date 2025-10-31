@@ -15,6 +15,7 @@ export default function Templates() {
   const [, setLocation] = useLocation();
   const { data: templates, isLoading } = trpc.templates.list.useQuery();
   const { data: categories } = trpc.templates.categories.useQuery();
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   if (loading || isLoading) {
     return (
@@ -38,7 +39,6 @@ export default function Templates() {
   };
 
   const allCategories = ["All", ...(categories || [])];
-  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const filteredTemplates = templates?.filter(
     (t: any) => selectedCategory === "All" || t.category === selectedCategory

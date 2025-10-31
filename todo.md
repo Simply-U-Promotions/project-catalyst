@@ -289,3 +289,8 @@
 - [x] Document decision to avoid Kubernetes until Year 2
 - [x] Create clean, consolidated Version 2.1 documents
 - [x] Remove duplicate/appended sections
+
+## Bug Fixes (Templates Page)
+- [x] Fix React hooks error in Templates page ("Rendered more hooks than during the previous render")
+- [x] Ensure hooks are called unconditionally at component top level
+- [x] Test Templates page functionality after fix
