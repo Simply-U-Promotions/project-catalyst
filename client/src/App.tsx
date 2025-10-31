@@ -12,6 +12,7 @@ import Templates from "./pages/Templates";
 import Settings from "./pages/Settings";
 import ImportRepository from "./pages/ImportRepository";
 import AdminCostDashboard from "./pages/AdminCostDashboard";
+import AdminSecurity from "./pages/AdminSecurity";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path={"/import"} component={ImportRepository} />
       <Route path={"/settings"} component={Settings} />
       <Route path={"/admin/costs"} component={AdminCostDashboard} />
+      <Route path={"/admin/security"} component={AdminSecurity} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

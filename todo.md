@@ -233,8 +233,15 @@
 - [x] Include context (repo URL, request, error message) in reports
 - [ ] Enhance prompt engineering to preserve existing functionality
 - [ ] Implement AI-assisted scoping confirmation ("I plan to modify files A, B, C")
-- [ ] Add prompt injection sanitization and jailbreak detection
-- [ ] Create admin "kill switch" for Module 9 (code modification)
+- [x] Add prompt injection sanitization and jailbreak detection
+- [x] Create promptSecurity service with 30+ jailbreak patterns
+- [x] Implement validateCodeModificationRequest function
+- [x] Add security event logging
+- [x] Create admin "kill switch" for Module 9 (code modification)
+- [x] Build AdminSecurity page with kill switch toggles
+- [x] Add kill switch checks to code modification endpoint
+- [x] Implement isFeatureEnabled function for runtime checks
+- [x] Add rate limit configuration per feature
 - [ ] Build asynchronous workflow for complex modifications
 - [ ] Add cost alerts and fair use policy
 - [ ] Implement file-by-file diff review UI

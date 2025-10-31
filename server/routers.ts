@@ -249,31 +249,49 @@ export const appRouter = router({
         return pr;
       }),
     modifyCode: protectedProcedure
-      .input(z.object({
-        projectId: z.number(),
-        description: z.string(),
-      }))
-      .mutation(async ({ input }) => {
-        const { getProjectById, getProjectFiles } = await import("./db");
+      .input(z.object({ projectId: z.number(), description: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        // Security checks
+        const { validateCodeModificationRequest, isFeatureEnabled, logSecurityEvent } = await import("./promptSecurity");
         
-        // Get project and files
+        // Check kill switch
+        if (!isFeatureEnabled("code_modification")) {
+          throw new Error("Code modification feature is temporarily disabled. Please try again later.");
+        }
+        
+        // Validate and sanitize prompt
+        const validation = validateCodeModificationRequest(input.description);
+        if (!validation.isValid) {
+          // Log security event
+          await logSecurityEvent({
+            userId: ctx.user.id,
+            eventType: "jailbreak_attempt",
+            severity: "high",
+            details: validation.reason || "Invalid request",
+            prompt: input.description,
+          });
+          throw new Error(validation.reason || "Invalid request");
+        }
+        
+        const { getProjectById, getProjectFiles } = await import("./db");
         const project = await getProjectById(input.projectId);
+        
         if (!project || !project.githubRepoUrl) {
           throw new Error("Project not found or not linked to GitHub");
         }
         
         const files = await getProjectFiles(input.projectId);
         
-        // Analyze and generate modifications
+        // Analyze and generate modifications with sanitized prompt
         const result = await analyzeAndModifyCode({
-          description: input.description,
+          description: validation.sanitized,
           files: files.map(f => ({
             path: f.filePath,
             content: f.content,
             language: f.language || undefined,
           })),
           repoName: project.name,
-        });
+        }, { userId: ctx.user.id, projectId: input.projectId });
         
         return result;
       }),
