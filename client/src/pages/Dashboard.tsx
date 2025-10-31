@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { Code2, Plus, Clock, CheckCircle2, AlertCircle, GitBranch } from "lucide-react";
 import Footer from "@/components/Footer";
 import { useLocation } from "wouter";
+import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
@@ -14,12 +15,8 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+  if (authLoading || projectsLoading) {
+    return <DashboardSkeleton />;
   }
 
   if (!isAuthenticated) {

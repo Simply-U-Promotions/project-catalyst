@@ -26,6 +26,9 @@ export default function ImportRepository() {
     },
   });
 
+  // Move useUtils to component level - hooks must be called at top level
+  const utils = trpc.useUtils();
+
   const handleValidate = async () => {
     if (!repoUrl.trim()) return;
 
@@ -33,7 +36,6 @@ export default function ImportRepository() {
     setValidationResult(null);
 
     try {
-      const utils = trpc.useUtils();
       const info = await utils.github.getRepoInfo.fetch({ repoUrl });
       setValidationResult({
         valid: true,

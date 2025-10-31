@@ -26,6 +26,10 @@ export default defineConfig({
     emptyOutDir: true,
     // Optimize for memory efficiency
     chunkSizeWarningLimit: 2000,
+    // Optimize asset handling
+    assetsInlineLimit: 4096, // Inline assets < 4KB
+    // Reduce bundle size
+    reportCompressedSize: false, // Faster builds
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -60,6 +64,20 @@ export default defineConfig({
     sourcemap: false,
     // Increase chunk size limit to prevent warnings
     cssCodeSplit: true,
+    // Enable tree shaking
+    treeshake: {
+      moduleSideEffects: 'no-external',
+      propertyReadSideEffects: false,
+      tryCatchDeoptimization: false,
+    },
+    // Additional memory optimizations
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+    // Limit parallel processing to reduce memory
+    modulePreload: {
+      polyfill: false,
+    },
   },
   server: {
     host: true,

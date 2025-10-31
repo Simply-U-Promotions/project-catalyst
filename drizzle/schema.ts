@@ -253,3 +253,224 @@ export const deploymentEnvVars = mysqlTable("deployment_env_vars", {
 
 export type DeploymentEnvVar = typeof deploymentEnvVars.$inferSelect;
 export type InsertDeploymentEnvVar = typeof deploymentEnvVars.$inferInsert;
+/**
+ * Cost alerts - configurable alerts for cost thresholds
+ */
+export const costAlerts = mysqlTable("cost_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  alertType: mysqlEnum("alertType", ["daily", "weekly", "monthly", "total"]).notNull(),
+  threshold: int("threshold").notNull(), // Threshold in cents
+  currentValue: int("currentValue").default(0).notNull(), // Current value in cents
+  isActive: int("isActive").default(1).notNull(), // 1 = active, 0 = disabled
+  lastTriggeredAt: timestamp("lastTriggeredAt"),
+  notificationMethod: mysqlEnum("notificationMethod", ["email", "dashboard", "both"]).default("both").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CostAlert = typeof costAlerts.$inferSelect;
+export type InsertCostAlert = typeof costAlerts.$inferInsert;
+
+/**
+ * Cost alert history - tracks when alerts were triggered
+ */
+export const costAlertHistory = mysqlTable("cost_alert_history", {
+  id: int("id").autoincrement().primaryKey(),
+  alertId: int("alertId").notNull().references(() => costAlerts.id),
+  userId: int("userId").notNull().references(() => users.id),
+  threshold: int("threshold").notNull(),
+  actualValue: int("actualValue").notNull(),
+  message: text("message").notNull(),
+  acknowledged: int("acknowledged").default(0).notNull(), // 1 = user acknowledged, 0 = not acknowledged
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CostAlertHistoryEntry = typeof costAlertHistory.$inferSelect;
+export type InsertCostAlertHistoryEntry = typeof costAlertHistory.$inferInsert;
+
+/**
+ * Usage analytics - tracks various platform usage metrics
+ */
+export const usageAnalytics = mysqlTable("usage_analytics", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  date: varchar("date", { length: 10 }).notNull(), // Format: YYYY-MM-DD
+  projectsCreated: int("projectsCreated").default(0).notNull(),
+  codeGenerations: int("codeGenerations").default(0).notNull(),
+  deploymentsTriggered: int("deploymentsTriggered").default(0).notNull(),
+  githubCommits: int("githubCommits").default(0).notNull(),
+  aiTokensUsed: int("aiTokensUsed").default(0).notNull(),
+  costIncurred: int("costIncurred").default(0).notNull(), // Cost in cents
+  activeMinutes: int("activeMinutes").default(0).notNull(), // Time spent actively using platform
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UsageAnalytics = typeof usageAnalytics.$inferSelect;
+export type InsertUsageAnalytics = typeof usageAnalytics.$inferInsert;
+
+/**
+ * Fair use policy violations - tracks users exceeding fair use limits
+ */
+export const fairUsePolicyViolations = mysqlTable("fair_use_policy_violations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  violationType: mysqlEnum("violationType", [
+    "daily_cost_limit",
+    "monthly_cost_limit",
+    "rate_limit",
+    "abuse_detected",
+    "suspicious_activity"
+  ]).notNull(),
+  description: text("description").notNull(),
+  severity: mysqlEnum("severity", ["warning", "critical"]).notNull(),
+  actionTaken: mysqlEnum("actionTaken", ["none", "warning_sent", "rate_limited", "account_suspended"]).default("none").notNull(),
+  resolved: int("resolved").default(0).notNull(), // 1 = resolved, 0 = active
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FairUsePolicyViolation = typeof fairUsePolicyViolations.$inferSelect;
+export type InsertFairUsePolicyViolation = typeof fairUsePolicyViolations.$inferInsert;
+
+/**
+ * Billing records - tracks billing cycles and payments
+ */
+export const billingRecords = mysqlTable("billing_records", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  billingPeriodStart: timestamp("billingPeriodStart").notNull(),
+  billingPeriodEnd: timestamp("billingPeriodEnd").notNull(),
+  totalCost: int("totalCost").notNull(), // Cost in cents
+  aiCost: int("aiCost").notNull(), // AI API costs in cents
+  deploymentCost: int("deploymentCost").notNull(), // Deployment costs in cents
+  databaseCost: int("databaseCost").notNull(), // Database costs in cents
+  status: mysqlEnum("status", ["pending", "paid", "overdue", "waived"]).default("pending").notNull(),
+  invoiceUrl: varchar("invoiceUrl", { length: 500 }),
+  paidAt: timestamp("paidAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BillingRecord = typeof billingRecords.$inferSelect;
+export type InsertBillingRecord = typeof billingRecords.$inferInsert;
+
+/**
+ * Deployment environments - supports dev/staging/prod environments
+ */
+export const deploymentEnvironments = mysqlTable("deploy_envs", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull().references(() => projects.id),
+  name: varchar("name", { length: 100 }).notNull(), // e.g., "Production", "Staging", "Development"
+  type: mysqlEnum("type", ["development", "staging", "production"]).notNull(),
+  branch: varchar("branch", { length: 255 }).notNull(), // Git branch to deploy from
+  subdomain: varchar("subdomain", { length: 255 }).notNull().unique(), // e.g., "my-app-staging"
+  deploymentUrl: varchar("deploymentUrl", { length: 500 }).notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "deploying", "failed"]).default("inactive").notNull(),
+  autoDeployEnabled: int("autoDeployEnabled").default(0).notNull(), // 1 = auto-deploy on push, 0 = manual only
+  lastDeployedAt: timestamp("lastDeployedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DeploymentEnvironment = typeof deploymentEnvironments.$inferSelect;
+export type InsertDeploymentEnvironment = typeof deploymentEnvironments.$inferInsert;
+
+/**
+ * Environment-specific variables - different env vars per environment
+ */
+export const environmentVariables = mysqlTable("env_vars", {
+  id: int("id").autoincrement().primaryKey(),
+  environmentId: int("environmentId").notNull().references(() => deploymentEnvironments.id),
+  key: varchar("key", { length: 255 }).notNull(),
+  value: text("value").notNull(), // Should be encrypted
+  isSecret: int("isSecret").default(0).notNull(), // 1 = secret (masked in UI), 0 = public
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EnvironmentVariable = typeof environmentVariables.$inferSelect;
+export type InsertEnvironmentVariable = typeof environmentVariables.$inferInsert;
+
+/**
+ * Team collaboration - team management
+ */
+export const teams = mysqlTable("teams", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  ownerId: int("ownerId").notNull().references(() => users.id),
+  plan: mysqlEnum("plan", ["free", "pro", "enterprise"]).default("free").notNull(),
+  maxMembers: int("maxMembers").default(5).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Team = typeof teams.$inferSelect;
+export type InsertTeam = typeof teams.$inferInsert;
+
+/**
+ * Team members - users belonging to teams
+ */
+export const teamMembers = mysqlTable("team_members", {
+  id: int("id").autoincrement().primaryKey(),
+  teamId: int("teamId").notNull().references(() => teams.id),
+  userId: int("userId").notNull().references(() => users.id),
+  role: mysqlEnum("role", ["owner", "admin", "member", "viewer"]).default("member").notNull(),
+  invitedBy: int("invitedBy").references(() => users.id),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamMember = typeof teamMembers.$inferInsert;
+
+/**
+ * Team invitations - pending invites
+ */
+export const teamInvitations = mysqlTable("team_invitations", {
+  id: int("id").autoincrement().primaryKey(),
+  teamId: int("teamId").notNull().references(() => teams.id),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["admin", "member", "viewer"]).default("member").notNull(),
+  invitedBy: int("invitedBy").notNull().references(() => users.id),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "accepted", "expired", "cancelled"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TeamInvitation = typeof teamInvitations.$inferSelect;
+export type InsertTeamInvitation = typeof teamInvitations.$inferInsert;
+
+/**
+ * Project team access - which teams can access which projects
+ */
+export const projectTeamAccess = mysqlTable("project_team_access", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull().references(() => projects.id),
+  teamId: int("teamId").notNull().references(() => teams.id),
+  accessLevel: mysqlEnum("accessLevel", ["read", "write", "admin"]).default("read").notNull(),
+  grantedBy: int("grantedBy").notNull().references(() => users.id),
+  grantedAt: timestamp("grantedAt").defaultNow().notNull(),
+});
+
+export type ProjectTeamAccess = typeof projectTeamAccess.$inferSelect;
+export type InsertProjectTeamAccess = typeof projectTeamAccess.$inferInsert;
+
+/**
+ * Activity log - track team member activities
+ */
+export const activityLog = mysqlTable("activity_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  teamId: int("teamId").references(() => teams.id),
+  projectId: int("projectId").references(() => projects.id),
+  action: varchar("action", { length: 100 }).notNull(), // e.g., "project.created", "deployment.started"
+  details: text("details"), // JSON string with additional context
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: varchar("userAgent", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ActivityLog = typeof activityLog.$inferSelect;
+export type InsertActivityLog = typeof activityLog.$inferInsert;

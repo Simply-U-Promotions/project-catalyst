@@ -53,7 +53,8 @@ export default function ProjectDetail() {
       utils.projects.getFiles.invalidate({ projectId });
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to generate project");
+      const { title, message } = getUserFriendlyError(error);
+      toast.error(title, { description: message });
     },
   });
 

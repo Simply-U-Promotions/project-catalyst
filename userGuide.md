@@ -176,9 +176,253 @@ Within each project:
 
 ---
 
+## Repository Workflow
+
+### Understanding Your GitHub Repository
+
+When you create a project, Catalyst automatically creates a GitHub repository with this structure:
+
+```
+my-project/
+├── client/              # Frontend application
+│   ├── src/
+│   │   ├── pages/      # Page components
+│   │   ├── components/ # Reusable UI components
+│   │   ├── lib/        # Utilities and helpers
+│   │   └── App.tsx     # Main application
+│   └── package.json
+├── server/              # Backend application
+│   ├── routers.ts      # API endpoints (tRPC)
+│   ├── db.ts           # Database queries
+│   └── _core/          # Framework code
+├── drizzle/             # Database schema
+│   └── schema.ts
+├── README.md            # Project documentation
+├── package.json         # Dependencies
+└── .gitignore          # Ignored files
+```
+
+### Working with Your Repository
+
+**Clone Your Repository:**
+```bash
+git clone https://github.com/yourusername/my-project.git
+cd my-project
+npm install
+```
+
+**Run Locally:**
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run tests
+npm test
+```
+
+**Make Changes:**
+1. Create a new branch: `git checkout -b feature/new-feature`
+2. Make your changes in the code
+3. Commit: `git commit -m "feat: add new feature"`
+4. Push: `git push origin feature/new-feature`
+5. Create pull request on GitHub
+6. After review, merge to main branch
+
+**Deploy Changes:**
+- **Automatic:** Push to main branch triggers auto-deploy (if enabled)
+- **Manual:** Use "Deploy Now" button in Deployments tab
+- **CLI:** Run `catalyst deploy` (requires CLI tool)
+
+### Commit Message Format
+
+Catalyst uses conventional commits for clear history:
+
+- `feat:` New feature (e.g., "feat: add user authentication")
+- `fix:` Bug fix (e.g., "fix: resolve login redirect issue")
+- `refactor:` Code refactoring (e.g., "refactor: simplify API calls")
+- `docs:` Documentation changes (e.g., "docs: update README")
+- `style:` Formatting changes (e.g., "style: fix indentation")
+- `test:` Adding tests (e.g., "test: add login flow tests")
+- `chore:` Maintenance tasks (e.g., "chore: update dependencies")
+
+### Branch Strategy
+
+**Main Branch:**
+- Protected branch (requires pull request reviews)
+- Always deployable
+- Production deployments pull from here
+
+**Feature Branches:**
+- Create from main: `git checkout -b feature/feature-name`
+- Work on your feature
+- Merge via pull request
+- Delete after merge
+
+**Environment Branches (Advanced):**
+- `develop` → Staging environment
+- `main` → Production environment
+- Feature branches → Development environment
+
+### Continuous Integration
+
+Every push to your repository triggers:
+1. **Build Check:** Verifies code compiles without errors
+2. **Type Check:** Ensures TypeScript types are valid
+3. **Linting:** Checks code style and quality
+4. **Tests:** Runs automated test suite (if configured)
+
+If any check fails, the deployment is blocked until fixed.
+
+---
+
+## Advanced Features
+
+### Cost Management
+
+Monitor and control your usage through the Cost Management dashboard:
+
+**Usage Dashboard:**
+- View AI tokens used
+- Track code generations
+- Monitor active deployments
+- See GitHub commit count
+- Review total cost breakdown
+
+**Cost Alerts:**
+Set spending limits and receive notifications:
+1. Go to Cost Management → Alerts
+2. Click "Create Alert"
+3. Choose threshold type (daily, weekly, monthly, total)
+4. Set amount limit
+5. Choose notification method (dashboard, email)
+
+**Fair Use Policy:**
+- Free tier includes $10/month in credits
+- Additional usage billed at cost
+- Transparent pricing with no hidden fees
+
+### Team Collaboration
+
+Invite team members to collaborate on projects:
+
+**Invite Team Members:**
+1. Go to Settings → Team
+2. Click "Invite Member"
+3. Enter email address
+4. Choose role (Admin, Member, Viewer)
+5. Click "Send Invitation"
+
+**Roles & Permissions:**
+- **Owner:** Full control, billing access, can transfer ownership
+- **Admin:** Manage team, create/delete projects, configure deployments
+- **Member:** Create projects, deploy code, manage own projects
+- **Viewer:** Read-only access to projects and deployments
+
+**Activity Log:**
+Track team member actions:
+- Project creations and deletions
+- Deployment triggers
+- Code changes and commits
+- Settings updates
+
+### Multi-Environment Support
+
+Manage multiple environments for each project:
+
+**Configure Environments:**
+1. Go to project Settings → Environments
+2. Click "Add Environment"
+3. Enter name (e.g., "staging", "production")
+4. Link to Git branch
+5. Set environment-specific variables
+6. Enable auto-deploy on push (optional)
+
+**Environment-Specific Variables:**
+- Different API keys per environment
+- Separate database connections
+- Feature flags for testing
+- Debug settings for development
+
+### External Deployment Providers
+
+Deploy to platforms beyond Catalyst:
+
+**Supported Providers:**
+- **Vercel:** Optimized for Next.js and React
+- **Netlify:** Great for static sites and JAMstack
+- **Railway:** Full-stack apps with databases
+- **Render:** Web services, databases, and cron jobs
+
+**Configure Provider:**
+1. Go to Settings → External Providers
+2. Select provider (Vercel, Netlify, Railway, Render)
+3. Enter API key or token
+4. Configure deployment settings
+5. Click "Save Configuration"
+6. Use "Deploy to [Provider]" button in project
+
+See [DEPLOYMENT_PROVIDERS.md](./DEPLOYMENT_PROVIDERS.md) for detailed setup instructions.
+
+---
+
+## Troubleshooting
+
+### Deployment Failed
+
+**Check deployment logs:**
+1. Go to project Deployments tab
+2. Click the failed deployment
+3. Review error messages in logs
+
+**Common issues:**
+- **Build errors:** Check code syntax and TypeScript errors
+- **Missing environment variables:** Add required variables in Settings
+- **Database connection:** Verify database credentials
+- **Port conflicts:** Ensure correct port configuration
+- **Memory limits:** Upgrade plan for more resources
+
+### GitHub Connection Issues
+
+**Reconnect GitHub:**
+1. Go to Settings → Integrations
+2. Click "Disconnect GitHub"
+3. Click "Connect GitHub"
+4. Authorize the application
+5. Grant repository access
+
+**Repository not created:**
+- Check GitHub permissions (requires repo creation rights)
+- Verify account has available repository slots
+- Try creating repository manually and linking it
+
+### Performance Issues
+
+**Slow loading:**
+- Enable caching in deployment settings
+- Optimize images and assets
+- Review database query performance
+- Consider upgrading to higher tier for more resources
+
+**High costs:**
+- Review usage in Cost Management dashboard
+- Set cost alerts to prevent overages
+- Optimize autoscaling settings
+- Delete unused projects and deployments
+
+---
+
 ## Support
 
 For questions, feature requests, or issues, please visit [https://help.manus.im](https://help.manus.im)
+
+**Additional Resources:**
+- **API Documentation:** [PUBLIC_API.md](./PUBLIC_API.md)
+- **CLI Documentation:** [CLI_TOOL.md](./CLI_TOOL.md)
+- **Security Audit:** [SECURITY_AUDIT.md](./SECURITY_AUDIT.md)
+- **Deployment Providers:** [DEPLOYMENT_PROVIDERS.md](./DEPLOYMENT_PROVIDERS.md)
 
 ---
 

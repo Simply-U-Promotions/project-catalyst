@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import ImportRepository from "./pages/ImportRepository";
 import AdminCostDashboard from "./pages/AdminCostDashboard";
 import AdminSecurity from "./pages/AdminSecurity";
+import CostManagement from "./pages/CostManagement";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path={"/projects/:id"} component={ProjectDetail} />
       <Route path={"/import"} component={ImportRepository} />
       <Route path={"/settings"} component={Settings} />
+      <Route path={"/cost-management"} component={CostManagement} />
       <Route path={"/admin/costs"} component={AdminCostDashboard} />
       <Route path={"/admin/security"} component={AdminSecurity} />
       <Route path={"/404"} component={NotFound} />

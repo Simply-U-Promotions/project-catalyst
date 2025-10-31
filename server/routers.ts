@@ -150,18 +150,18 @@ Return ONLY the JSON array, no additional text.`;
   }),
 
   templates: router({
-    list: publicProcedure.query(() => {
-      const { templates } = require("./templates");
+    list: publicProcedure.query(async () => {
+      const { templates } = await import("./templates");
       return templates;
     }),
     getById: publicProcedure
       .input(z.object({ id: z.string() }))
-      .query(({ input }) => {
-        const { getTemplateById } = require("./templates");
+      .query(async ({ input }) => {
+        const { getTemplateById } = await import("./templates");
         return getTemplateById(input.id);
       }),
-    categories: publicProcedure.query(() => {
-      const { getAllCategories } = require("./templates");
+    categories: publicProcedure.query(async () => {
+      const { getAllCategories } = await import("./templates");
       return getAllCategories();
     }),
   }),

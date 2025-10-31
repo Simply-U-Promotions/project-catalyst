@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
+import { PromptGuidance } from "@/components/PromptGuidance";
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
@@ -149,6 +150,13 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Prompt Guidance */}
+          {!chatStarted && (
+            <div className="mt-8">
+              <PromptGuidance />
             </div>
           )}
 
