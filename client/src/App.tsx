@@ -1,25 +1,36 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import NewProject from "./pages/NewProject";
-import ProjectDetail from "./pages/ProjectDetail";
-import Templates from "./pages/Templates";
-import Settings from "./pages/Settings";
-import ImportRepository from "./pages/ImportRepository";
-import AdminCostDashboard from "./pages/AdminCostDashboard";
-import AdminSecurity from "./pages/AdminSecurity";
-import CostManagement from "./pages/CostManagement";
-import Legal from "./pages/Legal";
-import AccountSettings from "./pages/AccountSettings";
+
+// Lazy load all pages for better code splitting
+const Home = lazy(() => import("./pages/Home"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const NewProject = lazy(() => import("./pages/NewProject"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const Templates = lazy(() => import("./pages/Templates"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ImportRepository = lazy(() => import("./pages/ImportRepository"));
+const AdminCostDashboard = lazy(() => import("./pages/AdminCostDashboard"));
+const AdminSecurity = lazy(() => import("./pages/AdminSecurity"));
+const CostManagement = lazy(() => import("./pages/CostManagement"));
+const Legal = lazy(() => import("./pages/Legal"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+  </div>
+);
 
 function Router() {
   return (
-    <Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/templates"} component={Templates} />
       <Route path={"/dashboard"} component={Dashboard} />
@@ -34,7 +45,8 @@ function Router() {
       <Route path={"/legal"} component={Legal} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </Suspense>
   );
 }
 

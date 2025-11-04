@@ -24,34 +24,66 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    // Optimize for memory efficiency
-    chunkSizeWarningLimit: 2000,
+    // Extreme memory optimization
+    chunkSizeWarningLimit: 1000,
     // Optimize asset handling
-    assetsInlineLimit: 4096, // Inline assets < 4KB
+    assetsInlineLimit: 2048, // Inline only very small assets
     // Reduce bundle size
     reportCompressedSize: false, // Faster builds
+    // Limit concurrent builds
+    maxParallelFileOps: 2,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Aggressive code splitting to reduce memory usage
+          // Ultra-aggressive code splitting for memory efficiency
           if (id.includes('node_modules')) {
-            // Split large libraries into separate chunks
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
+            // React core
+            if (id.includes('react/') || id.includes('react-dom/')) {
+              return 'react-core';
             }
-            if (id.includes('@trpc') || id.includes('@tanstack')) {
-              return 'trpc-vendor';
+            // React ecosystem
+            if (id.includes('react-') && !id.includes('react-dom')) {
+              return 'react-libs';
             }
+            // tRPC stack
+            if (id.includes('@trpc')) {
+              return 'trpc';
+            }
+            if (id.includes('@tanstack')) {
+              return 'tanstack';
+            }
+            // UI components - split by package
             if (id.includes('@radix-ui')) {
-              return 'ui-vendor';
+              const match = id.match(/@radix-ui\/react-([^/]+)/);
+              if (match) {
+                return `radix-${match[1]}`;
+              }
+              return 'radix-ui';
             }
+            // Icons
             if (id.includes('lucide-react')) {
               return 'icons';
             }
-            if (id.includes('mermaid') || id.includes('cytoscape') || id.includes('highlight.js')) {
-              return 'heavy-libs';
+            // AWS SDK
+            if (id.includes('@aws-sdk')) {
+              return 'aws-sdk';
             }
-            // All other node_modules go into vendor chunk
+            // Heavy visualization libraries
+            if (id.includes('mermaid') || id.includes('cytoscape')) {
+              return 'viz-libs';
+            }
+            // Markdown and syntax highlighting
+            if (id.includes('react-markdown') || id.includes('remark') || id.includes('rehype')) {
+              return 'markdown';
+            }
+            if (id.includes('highlight.js') || id.includes('prism')) {
+              return 'syntax';
+            }
+            // Animation
+            if (id.includes('framer-motion')) {
+              return 'animation';
+            }
+            // All other node_modules
             return 'vendor';
           }
         },
@@ -64,11 +96,12 @@ export default defineConfig({
     sourcemap: false,
     // Increase chunk size limit to prevent warnings
     cssCodeSplit: true,
-    // Enable tree shaking
+    // Aggressive tree shaking
     treeshake: {
-      moduleSideEffects: 'no-external',
+      moduleSideEffects: false,
       propertyReadSideEffects: false,
       tryCatchDeoptimization: false,
+      preset: 'smallest',
     },
     // Additional memory optimizations
     commonjsOptions: {
