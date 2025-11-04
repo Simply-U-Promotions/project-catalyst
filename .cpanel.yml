@@ -1,0 +1,13 @@
+---
+# cPanel Deployment Configuration
+# This file enables automated deployment from Git to cPanel
+
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/username/project-catalyst
+    - /bin/cp -R * $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - npm install --production=false
+    - npm run build
+    - npm prune --production
+    - touch tmp/restart.txt

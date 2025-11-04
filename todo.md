@@ -218,3 +218,11 @@
 - [x] Configure Vite for better tree-shaking
 - [ ] Test build with reduced memory footprint
 - [ ] Successfully create checkpoint
+
+
+## Verpex cPanel Deployment
+- [x] Create Verpex cPanel Node.js deployment guide
+- [x] Prepare deployment configuration for cPanel (.cpanel.yml)
+- [x] Create deployment script for Verpex
+- [x] Document environment variables setup
+- [ ] Test deployment on Verpex hosting (requires user's hosting credentials)
