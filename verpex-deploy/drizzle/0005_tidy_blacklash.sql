@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `isImported` int DEFAULT 0;

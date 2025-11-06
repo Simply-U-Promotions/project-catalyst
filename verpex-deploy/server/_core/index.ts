@@ -1,0 +1,126 @@
+import "dotenv/config";
+import express from "express";
+import { createServer } from "http";
+import net from "net";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { rateLimit } from "express-rate-limit";
+import { registerOAuthRoutes } from "./oauth";
+import { appRouter } from "../routers";
+import { createContext } from "./context";
+import { serveStatic, setupVite } from "./vite";
+
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const server = net.createServer();
+    server.listen(port, () => {
+      server.close(() => resolve(true));
+    });
+    server.on("error", () => resolve(false));
+  });
+}
+
+async function findAvailablePort(startPort: number = 3000): Promise<number> {
+  for (let port = startPort; port < startPort + 20; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`No available port found starting from ${startPort}`);
+}
+
+async function startServer() {
+  const app = express();
+  const server = createServer(app);
+  // Configure body parser with larger size limit for file uploads
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // Rate limiting for API endpoints
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+  
+  // Stricter rate limiting for expensive operations
+  const strictLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // Limit each IP to 10 requests per hour
+    message: 'Too many expensive operations, please try again later.',
+  });
+  
+  // Apply rate limiting to API routes
+  app.use('/api/', apiLimiter);
+  
+  // Health check endpoints (before rate limiting)
+  app.get("/health", async (req, res) => {
+    const { performHealthCheck } = await import("../healthCheck");
+    const health = await performHealthCheck();
+    const statusCode = health.status === "healthy" ? 200 : health.status === "degraded" ? 200 : 503;
+    res.status(statusCode).json(health);
+  });
+  
+  app.get("/health/ready", async (req, res) => {
+    const { performReadinessCheck } = await import("../healthCheck");
+    const readiness = await performReadinessCheck();
+    res.status(readiness.ready ? 200 : 503).json(readiness);
+  });
+  
+  app.get("/health/live", async (req, res) => {
+    const { performLivenessCheck } = await import("../healthCheck");
+    const liveness = performLivenessCheck();
+    res.status(liveness.alive ? 200 : 503).json(liveness);
+  });
+  
+  // OAuth callback under /api/oauth/callback
+  registerOAuthRoutes(app);
+  
+  // Preview endpoint for generated projects
+  app.get("/api/preview/:projectId", async (req, res) => {
+    try {
+      const { generatePreviewHTML } = await import("../previewService");
+      const projectId = parseInt(req.params.projectId);
+      
+      if (isNaN(projectId)) {
+        return res.status(400).send("Invalid project ID");
+      }
+      
+      const html = await generatePreviewHTML(projectId);
+      res.setHeader("Content-Type", "text/html");
+      res.send(html);
+    } catch (error) {
+      console.error("Preview error:", error);
+      res.status(500).send("Failed to generate preview");
+    }
+  });
+  
+  // tRPC API
+  app.use(
+    "/api/trpc",
+    createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
+  );
+  // development mode uses Vite, production mode uses static files
+  if (process.env.NODE_ENV === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  const preferredPort = parseInt(process.env.PORT || "3000");
+  const port = await findAvailablePort(preferredPort);
+
+  if (port !== preferredPort) {
+    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  }
+
+  server.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}/`);
+  });
+}
+
+startServer().catch(console.error);

@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `deploymentProvider` enum('vercel','railway','kubernetes') DEFAULT 'vercel';
